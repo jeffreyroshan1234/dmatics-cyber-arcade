@@ -1,12 +1,20 @@
-// The arcade UI (all three games, music, review) is a self-contained, offline-capable
-// document in /public/game.html. We mount it full-bleed. Because it is served over
-// http(s) and same-origin with the API routes below, its leaderboard auto-syncs to
-// the shared server board via /api/scores. Opened as a local file it falls back to
-// on-device localStorage — so the exact same file works online AND offline at the booth.
+// The arcade UI (all three games, music, animated backgrounds, review) is a
+// self-contained, offline-capable document in /public/game.html. We mount it
+// full-bleed. Because it is served over http(s) and same-origin with the API
+// routes, its leaderboard auto-syncs to the shared server board via /api/scores.
+// Opened as a local file it falls back to on-device localStorage — so the exact
+// same file works online AND offline at the booth.
+
+// Cache-busting: iframes are cached hard by browsers, so a new deploy can keep
+// showing the previous build. Stamping the commit SHA (or the build time as a
+// fallback) into the URL guarantees every deploy serves a fresh document.
+const BUILD_ID =
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) || Date.now().toString(36);
+
 export default function Page() {
   return (
     <iframe
-      src="/game.html"
+      src={`/game.html?v=${BUILD_ID}`}
       title="DMATICS Cyber Arcade"
       allow="autoplay; fullscreen"
       style={{
