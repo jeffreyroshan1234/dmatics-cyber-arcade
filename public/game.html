@@ -54,7 +54,8 @@
     z-index:2;padding:max(env(safe-area-inset-top),2vmin) max(env(safe-area-inset-right),2vmin) max(env(safe-area-inset-bottom),2vmin) max(env(safe-area-inset-left),2vmin);
     overflow:hidden;}
   .screen.on{display:flex;}
-  #hub.on,#review.on{overflow-y:auto;justify-content:flex-start;}
+  #hub.on{overflow-y:auto;justify-content:flex-start;}
+  #review.on{overflow:hidden;justify-content:flex-start;padding:0;}
   #game.on{justify-content:flex-start;padding:0;}
   body.shake #game{animation:shk .3s;}
   @keyframes shk{0%,100%{transform:none}20%{transform:translate(-1.2vmin,.3vmin)}40%{transform:translate(1vmin,-.3vmin)}60%{transform:translate(-.6vmin,.1vmin)}80%{transform:translate(.3vmin,0)}}
@@ -170,7 +171,7 @@
   @keyframes flyR{to{transform:translateX(120vw) rotate(16deg);opacity:.5;}}
   .email.wrongcard{animation:wshake .4s;outline:.22em solid #e2354f;outline-offset:.18em;}
   @keyframes wshake{0%,100%{transform:none}25%{transform:translateX(-.6em) rotate(-1deg)}50%{transform:translateX(.55em)}75%{transform:translateX(-.3em) rotate(1deg)}}
-  .email .apphdr{display:flex;align-items:center;gap:.5em;padding-bottom:.6em;border-bottom:.14em solid # e9ddcd;border-bottom-color:#e9ddcd;margin-bottom:.7em;color:#a08f80;font-size:calc(var(--u)*.78);letter-spacing:.12em;font-weight:800;}
+  .email .apphdr{display:flex;align-items:center;gap:.5em;padding-bottom:.6em;border-bottom:.14em solid #e9ddcd;margin-bottom:.7em;color:#a08f80;font-size:calc(var(--u)*.78);letter-spacing:.12em;font-weight:800;}
   .email .dot{width:.6em;height:.6em;border-radius:99px;background:var(--acc);display:inline-block;}
   .email .from{font-size:calc(var(--u)*1);color:#4a3c40;margin-bottom:.15em;word-break:break-all;font-weight:800;}
   .email .from .addr{color:#93807c;font-weight:500;}
@@ -271,7 +272,14 @@
   .brow.me{background:color-mix(in srgb,var(--acc2) 16%,transparent);border:.14em solid var(--acc2);color:var(--ink);font-weight:800;}
 
   /* ---------------- REVIEW ---------------- */
-  .rvwrap{width:100%;max-width:min(760px,94vw);margin:0 auto;padding:calc(var(--u)*4.5) 0 calc(var(--u)*7);display:flex;flex-direction:column;gap:calc(var(--u)*.9);}
+  /* review scrolls INSIDE its own region so the action bar can never sit on top of a card */
+  .rvscroll{flex:1 1 auto;width:100%;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:0 2vmin;overscroll-behavior:contain;}
+  /* scrim so cards scrolling past never collide with the floating nav chips */
+  #review::before{content:'';position:absolute;top:0;left:0;right:0;z-index:4;pointer-events:none;
+    height:calc(env(safe-area-inset-top) + var(--u)*3.6);
+    background:linear-gradient(to bottom,var(--bg) 58%,transparent);}
+  .rvwrap{width:100%;max-width:min(760px,94vw);margin:0 auto;padding:calc(var(--u)*4.2) 0 calc(var(--u)*1.4);display:flex;flex-direction:column;gap:calc(var(--u)*.9);}
   .rvhead{text-align:center;}
   .rvhead h2{font-size:calc(var(--u)*1.9);font-weight:800;}
   .rvhead p{color:var(--sub);font-size:calc(var(--u)*.9);margin-top:.4em;font-weight:600;}
@@ -303,8 +311,9 @@
   .rvsec.why .h{color:var(--acc2);}
   .rvsec.act .h{color:var(--amber);}
   .rvsec b{color:var(--ink);}
-  .rvfoot{position:fixed;bottom:0;left:0;right:0;padding:1.2vmin 2vmin calc(env(safe-area-inset-bottom) + 1.4vmin);display:flex;gap:.8em;justify-content:center;
-    background:linear-gradient(to top,var(--bg) 55%,transparent);z-index:47;}
+  .rvfoot{flex:0 0 auto;width:100%;padding:1.3vmin 2vmin calc(env(safe-area-inset-bottom) + 1.4vmin);display:flex;gap:.8em;
+    justify-content:center;align-items:center;flex-wrap:wrap;background:var(--bg);border-top:.14em solid var(--edge);
+    box-shadow:0 -.6em 1.6em rgba(0,0,0,.55);z-index:5;}
 
   /* ---------------- MODAL ---------------- */
   .modal-bg{position:fixed;inset:0;background:rgba(6,3,12,.8);z-index:80;display:none;align-items:center;justify-content:center;padding:4vmin;backdrop-filter:blur(4px);}
@@ -324,6 +333,51 @@
   .modal p.mbody b{color:var(--ink);}
 
   #confetti{position:fixed;inset:0;pointer-events:none;z-index:66;}
+  /* live per-game background field: blue-team modes for Phish/SOC, red-team for Breach */
+  #bgfx{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.55;transition:opacity .5s;}
+  body[data-game="breach"] #bgfx{opacity:.62;}
+
+  /* ---------------- HALL OF FAME (hub leaderboard) ---------------- */
+  .lbsec{width:100%;background:linear-gradient(180deg,var(--panel2),var(--panel));border:.16em solid var(--edge);
+    border-radius:calc(var(--u)*1.3);padding:calc(var(--u)*1.3);display:flex;flex-direction:column;gap:calc(var(--u)*.85);
+    box-shadow:0 .5em 0 rgba(0,0,0,.35);position:relative;overflow:hidden;}
+  .lbsec::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 80% 60% at 50% -20%,color-mix(in srgb,var(--amber) 16%,transparent),transparent 70%);}
+  .lbhead{display:flex;align-items:center;justify-content:space-between;gap:.8em;flex-wrap:wrap;position:relative;}
+  .lbtitle{font-size:calc(var(--u)*1.45);font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:.4em;}
+  .lblive{font-size:calc(var(--u)*.66);letter-spacing:.16em;font-weight:800;padding:.35em .8em;border-radius:99px;
+    border:.12em solid rgba(62,230,122,.5);color:#7ff0a8;background:rgba(62,230,122,.1);display:flex;align-items:center;gap:.45em;white-space:nowrap;}
+  .lblive .dotl{width:.55em;height:.55em;border-radius:99px;background:var(--good);animation:lpulse 1.6s infinite;}
+  .lblive.off{border-color:rgba(255,157,60,.5);color:#ffc48a;background:rgba(255,157,60,.1);}
+  .lblive.off .dotl{background:var(--miss);}
+  @keyframes lpulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(62,230,122,.6);}70%{opacity:.6;box-shadow:0 0 0 .5em rgba(62,230,122,0);}}
+  .lbtabs{display:flex;gap:.45em;flex-wrap:wrap;position:relative;}
+  .lbtab{background:rgba(244,247,255,.06);border:.14em solid var(--edge);color:var(--sub);font-weight:800;font-family:inherit;
+    font-size:calc(var(--u)*.78);letter-spacing:.06em;padding:.5em 1em;border-radius:99px;cursor:pointer;min-height:2.5em;transition:background .15s,color .15s,border-color .15s;}
+  .lbtab:active{transform:scale(.96);}
+  .lbtab.on{background:color-mix(in srgb,var(--acc) 22%,transparent);border-color:var(--acc);color:var(--ink);}
+  .lbbody{display:flex;flex-direction:column;gap:.4em;position:relative;min-height:calc(var(--u)*10);}
+  .lbrow{display:grid;grid-template-columns:calc(var(--u)*2.6) 1fr auto;align-items:center;gap:.7em;
+    padding:.6em .9em;border-radius:.6em;background:rgba(244,247,255,.045);font-weight:700;
+    animation:lbin .32s both;}
+  @keyframes lbin{from{opacity:0;transform:translateX(-.8em);}to{opacity:1;transform:none;}}
+  .lbrow:nth-child(1){animation-delay:.02s}.lbrow:nth-child(2){animation-delay:.06s}.lbrow:nth-child(3){animation-delay:.1s}
+  .lbrow:nth-child(4){animation-delay:.14s}.lbrow:nth-child(5){animation-delay:.18s}.lbrow:nth-child(6){animation-delay:.22s}
+  .lbrow:nth-child(7){animation-delay:.26s}.lbrow:nth-child(8){animation-delay:.3s}
+  .lbrow .pos{font-size:calc(var(--u)*.95);font-weight:800;color:var(--sub);text-align:center;}
+  .lbrow .who{font-size:calc(var(--u)*1.15);font-weight:800;color:var(--ink);letter-spacing:.16em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap;}
+  .lbrow .gm{font-size:calc(var(--u)*.64);letter-spacing:.1em;font-weight:800;padding:.22em .6em;border-radius:99px;
+    background:rgba(244,247,255,.08);color:var(--sub);letter-spacing:.08em;}
+  .lbrow .gm.phish{background:rgba(255,93,115,.16);color:#ffa3b3;}
+  .lbrow .gm.soc{background:rgba(143,230,53,.16);color:#c6f18a;}
+  .lbrow .gm.breach{background:rgba(185,140,255,.18);color:#d5b8ff;}
+  .lbrow .pts{font-size:calc(var(--u)*1.2);font-weight:800;color:var(--amber);letter-spacing:.02em;}
+  .lbrow.top1{background:linear-gradient(90deg,rgba(255,210,63,.2),rgba(255,210,63,.05));border:.12em solid rgba(255,210,63,.5);}
+  .lbrow.top1 .pos{color:#ffd23f;}
+  .lbrow.top2{background:linear-gradient(90deg,rgba(226,232,240,.15),rgba(226,232,240,.04));}
+  .lbrow.top3{background:linear-gradient(90deg,rgba(205,127,50,.18),rgba(205,127,50,.04));}
+  .lbempty{text-align:center;color:var(--sub);font-size:calc(var(--u)*.95);padding:calc(var(--u)*2) 1em;font-weight:600;line-height:1.5;}
+  .lbnote{font-size:calc(var(--u)*.74);color:#6b5f8c;text-align:center;font-weight:600;letter-spacing:.04em;position:relative;}
 
   /* ===== v3.1 ARCADE ANIMATIONS ===== */
   /* screen transitions (not the game screen — it owns the shake transform) */
@@ -371,7 +425,7 @@
 </head>
 <body data-game="hub">
 
-<div id="floor"></div><div id="grain"></div><div id="vig"></div><div id="crt"></div>
+<div id="floor"></div><canvas id="bgfx"></canvas><div id="grain"></div><div id="vig"></div><div id="crt"></div>
 
 <div class="navrow" id="nav">
   <button class="navchip" onclick="ARCADE.goHub()">◄ ARCADE</button>
@@ -413,6 +467,21 @@
         <div class="btnrow"><button class="play" onclick="ARCADE.start('breach')">PLAY</button><button class="how" onclick="ARCADE.how('breach')">?</button></div>
       </div>
     </div>
+    <div class="lbsec" id="lbsec">
+      <div class="lbhead">
+        <span class="lbtitle">🏆 HALL OF FAME</span>
+        <span class="lblive" id="lblive"><span class="dotl"></span><span id="lblivetxt">LIVE</span></span>
+      </div>
+      <div class="lbtabs" id="lbtabs">
+        <button class="lbtab on" onclick="ARCADE.hall('all',this)">ALL GAMES</button>
+        <button class="lbtab" onclick="ARCADE.hall('phish',this)">PHISH HUNTER</button>
+        <button class="lbtab" onclick="ARCADE.hall('soc',this)">ALERT RUSH</button>
+        <button class="lbtab" onclick="ARCADE.hall('breach',this)">BREACH POINT</button>
+      </div>
+      <div class="lbbody" id="lbbody"></div>
+      <div class="lbnote" id="lbnote"></div>
+    </div>
+
     <div class="hubfoot">
       <button class="setupchip" onclick="ARCADE.openSetup()">⚙ Booth setup</button>
       <span class="foot">DMATICS IT SOLUTIONS LLC · SOC · NOC · PENTESTING</span>
@@ -476,17 +545,19 @@
 
 <!-- ============ REVIEW ============ -->
 <div class="screen" id="review">
-  <div class="rvwrap">
-    <div class="rvhead">
-      <h2 id="rv-title">Your Answers</h2>
-      <p id="rv-summary"></p>
-      <div class="rvlegend">
-        <span class="lg g"><span class="sw"></span>Correct</span>
-        <span class="lg r"><span class="sw"></span>Wrong</span>
-        <span class="lg o"><span class="sw"></span>Missed / no answer</span>
+  <div class="rvscroll" id="rvscroll">
+    <div class="rvwrap">
+      <div class="rvhead">
+        <h2 id="rv-title">Your Answers</h2>
+        <p id="rv-summary"></p>
+        <div class="rvlegend">
+          <span class="lg g"><span class="sw"></span>Correct</span>
+          <span class="lg r"><span class="sw"></span>Wrong</span>
+          <span class="lg o"><span class="sw"></span>Missed / no answer</span>
+        </div>
       </div>
+      <div class="rvlist" id="rvlist"></div>
     </div>
-    <div class="rvlist" id="rvlist"></div>
   </div>
   <div class="rvfoot">
     <button class="btn2" onclick="ARCADE.closeReview()">◄ Score</button>
@@ -599,135 +670,507 @@ let toastTimer=null;function toast(kind,msg){const t=$('toast');t.className=kind
    clue  = WHY (the tell / the reasoning)
    act   = WHAT TO DO (concrete action / remediation)
 ============================================================ */
+/* ============================================================
+   DATA v4 — UAE EDITION
+   Every generated item carries:
+     clue = WHY (the tell / the reasoning)
+     act  = WHAT TO DO (concrete action / remediation)
+
+   Anti-repeat: every bank is drawn from a shuffled "bag"
+   (draw without replacement). Bags persist for the whole
+   session AND remember recent draws in localStorage, so a
+   brand-new game never opens with what you just saw.
+============================================================ */
+const SEEN_KEY = 'dm_seen_v4';
+function loadSeen(){ try{ return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; }catch(e){ return {}; } }
+function saveSeen(s){ try{ localStorage.setItem(SEEN_KEY, JSON.stringify(s)); }catch(e){} }
+const SEEN = loadSeen();
+function shuffled(n){ const a=[...Array(n).keys()]; for(let i=a.length-1;i>0;i--){ const j=RN(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function makeBag(name,size){
+  let deck=[];
+  const memory = Math.max(2, Math.floor(size*0.55));
+  function refill(){
+    const recent = SEEN[name] || [];
+    const all = shuffled(size);
+    // items seen recently get pushed to the back of the new deck
+    deck = all.filter(i=>!recent.includes(i)).concat(all.filter(i=>recent.includes(i)));
+  }
+  refill();
+  return {
+    size,
+    draw(){
+      if(!deck.length) refill();
+      const i = deck.shift();
+      const arr = (SEEN[name] || []).concat(i);
+      SEEN[name] = arr.slice(-memory);
+      saveSeen(SEEN);
+      return i;
+    }
+  };
+}
+const BAGS = {};
+function bag(name,size){ if(!BAGS[name] || BAGS[name].size!==size) BAGS[name]=makeBag(name,size); return BAGS[name]; }
+function drawFrom(name,arr){ return arr[bag(name,arr.length).draw()]; }
+function resetPools(){ /* bags intentionally persist across games so content keeps advancing */ }
+
 /* ---------- PHISH ---------- */
-const BRANDS=[{n:'Microsoft',d:'microsoft.com'},{n:'Apple',d:'apple.com'},{n:'Google',d:'google.com'},{n:'Netflix',d:'netflix.com'},{n:'Spotify',d:'spotify.com'},{n:'Amazon',d:'amazon.ae'},{n:'DHL Express',d:'dhl.com'},{n:'Aramex',d:'aramex.com'},{n:'FedEx',d:'fedex.com'},{n:'LinkedIn',d:'linkedin.com'},{n:'Instagram',d:'instagram.com'},{n:'WhatsApp',d:'whatsapp.com'},{n:'Zoom',d:'zoom.us'},{n:'Slack',d:'slack.com'},{n:'GitHub',d:'github.com'},{n:'Adobe',d:'adobe.com'},{n:'Emirates NBD',d:'emiratesnbd.com'},{n:'ADCB',d:'adcb.com'},{n:'Mashreq',d:'mashreq.com'},{n:'Etisalat',d:'etisalat.ae'},{n:'du',d:'du.ae'},{n:'Salik',d:'salik.ae'},{n:'RTA Dubai',d:'rta.ae'},{n:'Emirates',d:'emirates.com'},{n:'Careem',d:'careem.com'},{n:'Talabat',d:'talabat.com'},{n:'Noon',d:'noon.com'},{n:'Dropbox',d:'dropbox.com'}];
-const NAMES=['Ahmed','Sara','Omar','Fatima','Layla','Yousef','Mariam','Khalid','Priya','Wei','David','Elena','John','Aisha','Tariq','Noor','Hassan','Dina','Ravi','Lucia','Zainab','Marco','Huda','Sam'];
-const EXECS=['Ahmed (CEO)','Sarah (CFO)','Mr. Al Rashid (Chairman)','Dana (Managing Director)','Omar (VP Finance)'];
-const JUICY=['Q4_Salaries_FINAL.xlsx','Layoff_List_CONFIDENTIAL.docx','Bonus_Payouts_2026.xlsx','Board_Minutes_PRIVATE.pdf','Merger_Draft_v3.docx'];
-function fakeDomain(d){const base=d.split('.')[0],tld=d.slice(d.indexOf('.'));const t=[];
- if(base.includes('m'))t.push(()=>base.replace('m','rn')+tld);if(base.includes('o'))t.push(()=>base.replace('o','0')+tld);
- if(base.includes('l'))t.push(()=>base.replace('l','1')+tld);if(base.includes('i'))t.push(()=>base.replace('i','l')+tld);
+const BRANDS=[
+ {n:'Microsoft',d:'microsoft.com'},{n:'Apple',d:'apple.com'},{n:'Google',d:'google.com'},{n:'Netflix',d:'netflix.com'},
+ {n:'Spotify',d:'spotify.com'},{n:'Amazon.ae',d:'amazon.ae'},{n:'DHL Express',d:'dhl.com'},{n:'Aramex',d:'aramex.com'},
+ {n:'FedEx',d:'fedex.com'},{n:'LinkedIn',d:'linkedin.com'},{n:'Instagram',d:'instagram.com'},{n:'WhatsApp',d:'whatsapp.com'},
+ {n:'Zoom',d:'zoom.us'},{n:'Slack',d:'slack.com'},{n:'GitHub',d:'github.com'},{n:'Adobe',d:'adobe.com'},
+ {n:'Emirates NBD',d:'emiratesnbd.com'},{n:'First Abu Dhabi Bank',d:'bankfab.com'},{n:'ADCB',d:'adcb.com'},
+ {n:'Mashreq',d:'mashreq.com'},{n:'ADIB',d:'adib.ae'},{n:'Emirates Islamic',d:'emiratesislamic.ae'},{n:'RAKBANK',d:'rakbank.ae'},
+ {n:'Etisalat by e&',d:'etisalat.ae'},{n:'du',d:'du.ae'},{n:'Salik',d:'salik.ae'},{n:'RTA Dubai',d:'rta.ae'},
+ {n:'DEWA',d:'dewa.gov.ae'},{n:'Emirates',d:'emirates.com'},{n:'flydubai',d:'flydubai.com'},{n:'Etihad Airways',d:'etihad.com'},
+ {n:'Careem',d:'careem.com'},{n:'Talabat',d:'talabat.com'},{n:'noon',d:'noon.com'},{n:'Dubizzle',d:'dubizzle.com'},
+ {n:'Emirates Post',d:'emiratespost.ae'},{n:'Dropbox',d:'dropbox.com'},{n:'Netflix AE',d:'netflix.com'}
+];
+const NAMES=['Ahmed','Sara','Omar','Fatima','Layla','Yousef','Mariam','Khalid','Priya','Wei','David','Elena','John','Aisha','Tariq','Noor','Hassan','Dina','Ravi','Lucia','Zainab','Marco','Huda','Sam','Rashid','Mei','Anil','Grace'];
+const EXECS=['Ahmed Al Suwaidi (CEO)','Sarah Habib (CFO)','Mr. Al Rashid (Chairman)','Dana Khoury (Managing Director)','Omar Farouk (VP Finance)','Hind Al Marri (COO)'];
+const JUICY=['Q4_Salaries_FINAL.xlsx','Layoff_List_CONFIDENTIAL.docx','Bonus_Payouts_2026.xlsx','Board_Minutes_PRIVATE.pdf','Merger_Draft_v3.docx','Emiratisation_Targets_2026.xlsx','Visa_Renewals_Staff.pdf'];
+const EMIRATES=['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain'];
+const AREAS=['Business Bay','Al Barsha','Deira','JLT','Media City','Al Quoz','Khalifa City','Al Nahda','Mirdif','Marina'];
+const uaePlate=()=>R(['A','B','C','D','E','F','G','H','J','K'])+' '+RN(10000,99999);
+const eid=()=>'784-'+RN(1980,2005)+'-'+RN(1000000,9999999)+'-'+RN(1,9);
+
+function fakeDomain(d){
+ const base=d.split('.')[0], tld=d.slice(d.indexOf('.'));
+ const t=[];
+ if(base.includes('m'))t.push(()=>base.replace('m','rn')+tld);
+ if(base.includes('o'))t.push(()=>base.replace('o','0')+tld);
+ if(base.includes('l'))t.push(()=>base.replace('l','1')+tld);
+ if(base.includes('i'))t.push(()=>base.replace('i','l')+tld);
  if(base.length>4)t.push(()=>{const i=RN(1,base.length-3);return base.slice(0,i)+base[i+1]+base[i]+base.slice(i+2)+tld;});
- t.push(()=>base+'-'+R(['secure','verify','alerts','billing','support','update'])+tld);
- t.push(()=>base+R(['.info','.xyz','.cc','.co','.online','.top']));
+ t.push(()=>base+'-'+R(['secure','verify','alerts','billing','support','update','portal','online'])+tld);
+ t.push(()=>base+R(['.info','.xyz','.cc','.co','.online','.top','.site','.live']));
  t.push(()=>d+'.'+R(['session','account','id'])+'-'+R(['verify','check','confirm'])+'.info');
- t.push(()=>'mail-'+base+R(['.net','.info','.cc']));return R(t)();}
+ t.push(()=>'mail-'+base+R(['.net','.info','.cc']));
+ t.push(()=>base+'.'+R(['ae-gov','gov-ae','uae-portal'])+'.com');
+ return R(t)();
+}
+const govFake=(slug)=>slug+R(['-gov','-uae','-ae','-portal','-online','-services'])+R(['.com','.net','.info','.org','.co','.site']);
+
 const ACT_REPORT='Don\'t click. Use the "Report Phishing" button (or forward to your SOC/IT), then delete. If you need the account, type the real address in your browser yourself.';
 const ACT_LEGIT='Safe to act on normally. Good habit even here: reach the site by typing its address or opening its app rather than clicking email links.';
+const ACT_GOV='Never use links in messages for government services. Open the official app (UAE PASS / Dubai Now / the entity\'s own app) or type the .gov.ae address yourself. Report and delete.';
+const ACT_BANK='Hang up / don\'t click. Call the number printed on the back of your card. Banks never ask for OTP, PIN or full card details. Report it to the bank and to eCrime (ecrime.ae).';
+
+/* --- brand-impersonation phishing (takes a brand) --- */
 const PHISH_T=[
- b=>{const h=R([12,24,48]),fd=fakeDomain(b.d);return{from:b.n+' Security',addr:'security@'+fd,subj:'Unusual sign-in activity detected',body:'We blocked a sign-in from '+R(['Moscow','Lagos','Pyongyang','an unrecognized device','Minsk'])+'. Verify your identity within '+h+' hours or your account will be permanently locked. <a>'+fd+'/verify</a>',clue:'Sender is '+fd+', not '+b.d+'. Fear + a countdown is the classic phishing pressure combo.',act:ACT_REPORT,easy:true};},
+ b=>{const h=R([12,24,48]),fd=fakeDomain(b.d);return{from:b.n+' Security',addr:'security@'+fd,subj:'Unusual sign-in activity detected',body:'We blocked a sign-in from '+R(['Moscow','Lagos','Pyongyang','an unrecognised device','Minsk'])+'. Verify your identity within '+h+' hours or your account will be permanently locked. <a>'+fd+'/verify</a>',clue:'Sender is '+fd+', not '+b.d+'. Fear plus a countdown is the classic phishing pressure combo.',act:ACT_REPORT,easy:true};},
  b=>{const fd=fakeDomain(b.d);return{from:b.n+' Billing',addr:'billing@'+fd,subj:'Payment declined — update your card',body:'Your last payment failed and your account is on hold. Update your payment details within '+R([24,48])+' hours to avoid cancellation: <a>'+fd+'/billing</a>',clue:'Billing panic from '+fd+' — the real domain is '+b.d+'. Attackers love "update your card" pages.',act:ACT_REPORT,easy:true};},
  b=>{const a=(RN(1,9)+'.99'),fd=fakeDomain(b.d);return{from:b.n,addr:'tracking@'+fd,subj:'Your parcel is on hold at customs',body:'A customs fee of AED '+a+' is required to release your package. Pay now to avoid return to sender: <a>'+fd+'/pay</a>',clue:'Couriers don\'t collect tiny fees via a random link, and '+fd+' isn\'t '+b.d+'.',act:'Don\'t pay. Track parcels only in the courier\'s official app/site. Report and delete.'};},
- b=>{const a=RN(80,400),fd=fakeDomain(b.d);return{from:b.n+' Refunds',addr:'refunds@'+fd,subj:'You are owed a refund of AED '+a,body:'Our system overcharged you last month. Enter your card details to claim your AED '+a+' refund: <a>'+fd+'/claim</a>',clue:'Refunds never require your full card number. Domain check: '+fd+' ≠ '+b.d+'.',act:'Never enter card details from an email link. Check refunds inside your real account. Report it.'};},
- b=>{const fd=fakeDomain(b.d);return{from:b.n+' Rewards',addr:'offers@'+fd,subj:'You\'ve won '+R(['12 months free','a AED 500 voucher','an exclusive upgrade'])+'!',body:'Congratulations! You were randomly selected. Claim within '+R([12,24])+' hours before it expires: <a>'+fd+'/claim</a>',clue:'Too good to be true + a countdown + a lookalike domain = bait.',act:'Delete it. If a brand really runs a promo, it\'s on their official site — go check there, not via the link.',easy:true};},
- b=>{const fd=fakeDomain(b.d);return{from:b.n+' Team',addr:'no-reply@'+fd,subj:'Your password expires TODAY',body:'Action required: your password expires in a few hours. Keep your current password by re-entering it here: <a>'+fd+'/keep-password</a>',clue:'"Re-enter your password to keep it" is a credential harvest, every time.',act:'Change passwords only from the app/site you typed yourself. Report this, and if you clicked, reset that password now + enable MFA.'};},
+ b=>{const a=RN(80,400),fd=fakeDomain(b.d);return{from:b.n+' Refunds',addr:'refunds@'+fd,subj:'You are owed a refund of AED '+a,body:'Our system overcharged you last month. Enter your card details to claim your AED '+a+' refund: <a>'+fd+'/claim</a>',clue:'Refunds never require your full card number. Domain check: '+fd+' is not '+b.d+'.',act:'Never enter card details from an email link. Check refunds inside your real account. Report it.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Rewards',addr:'offers@'+fd,subj:'You\'ve won '+R(['12 months free','a AED 500 voucher','an exclusive upgrade'])+'!',body:'Congratulations! You were randomly selected. Claim within '+R([12,24])+' hours before it expires: <a>'+fd+'/claim</a>',clue:'Too good to be true, plus a countdown, plus a lookalike domain — that\'s bait.',act:'Delete it. If a brand really runs a promo it will be on their official site — go check there, not via the link.',easy:true};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Team',addr:'no-reply@'+fd,subj:'Your password expires TODAY',body:'Action required: your password expires in a few hours. Keep your current password by re-entering it here: <a>'+fd+'/keep-password</a>',clue:'"Re-enter your password to keep it" is a credential harvest, every single time.',act:'Change passwords only from the app/site you typed yourself. Report this, and if you clicked, reset that password now and enable MFA.'};},
  b=>{const fd=fakeDomain(b.d);return{from:b.n+' Support',addr:'support@'+fd,subj:'Account scheduled for deletion',body:'Due to suspicious activity, your account will be deleted in '+R([12,24,48])+' hours. Cancel the deletion here: <a>'+fd+'/cancel-deletion</a>',clue:'Deletion threats with a countdown are pure pressure. Domain: '+fd+'.',act:'Ignore the link. Log in the normal way to check your account status. Report and delete.'};},
  b=>{const fd=fakeDomain(b.d);return{from:b.n+' Trust & Safety',addr:'violations@'+fd,subj:'Policy violation — final warning',body:'Your account was reported for violating our terms. Submit an appeal within 24 hours or lose access permanently: <a>'+fd+'/appeal</a>',clue:'Fake "violation appeals" harvest logins. The domain gives it away: '+fd+'.',act:'Appeals happen inside the real platform, never via an emailed link. Report and delete.'};},
  b=>{const a=RN(299,4999),fd=fakeDomain(b.d);return{from:b.n,addr:'receipts@'+fd,subj:'Receipt: AED '+a+' — thank you for your purchase',body:'Your order will be processed today. If you did not make this purchase, cancel immediately: <a>'+fd+'/cancel?order='+RN(10000,99999)+'</a>',clue:'A scary fake receipt baits you into "cancelling" on a phishing page. Sender: '+fd+'.',act:'Check real orders in the official app. Don\'t click "cancel". Report and delete.'};},
- b=>{const fd=fakeDomain(b.d);return{from:b.n+' Verification',addr:'verify@'+fd,subj:'Confirm the code we just sent you',body:'For your security, reply with the 6-digit code we just texted you to keep your account active. This is a routine check.',clue:'A one-time code is a key to your account. No real company asks you to share it.',act:'Never share an OTP with anyone, by email, call or chat. If you shared one, reset the account and enable MFA immediately.'};}];
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Verification',addr:'verify@'+fd,subj:'Confirm the code we just sent you',body:'For your security, reply with the 6-digit code we just texted you to keep your account active. This is a routine check.',clue:'A one-time code is a key to your account. No real company asks you to share it — ever.',act:'Never share an OTP with anyone, by email, call or chat. If you shared one, reset the account and enable MFA immediately.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Legal',addr:'copyright@'+fd,subj:'Copyright infringement — content removal in 24h',body:'A rights holder filed a claim against your account. Dispute the claim now or your account will be suspended: <a>'+fd+'/dispute</a>',clue:'Copyright-strike panic is a favourite lure. Real notices appear inside your account, not from '+fd+'.',act:'Check notifications in the real platform. Never dispute via an email link. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Cloud',addr:'storage@'+fd,subj:'Your storage is full — files will be deleted',body:'You have exceeded your quota. Files older than 30 days will be permanently removed unless you upgrade now: <a>'+fd+'/upgrade</a>',clue:'Threatening to delete your files is manufactured urgency, and '+fd+' is not '+b.d+'.',act:'Check storage inside the real app. Never upgrade through an emailed link. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Security',addr:'device-alert@'+fd,subj:'New device added to your account',body:'A '+R(['Samsung Galaxy','Xiaomi Redmi','Windows PC'])+' in '+R(['Kyiv','Hanoi','Bogotá'])+' was added to your account. If this wasn\'t you, remove it immediately: <a>'+fd+'/remove-device</a>',clue:'Real security alerts say "no action needed"; fakes push a "remove it" button on a lookalike domain.',act:'Review devices inside the official app or site you typed yourself. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Subscriptions',addr:'auto-renew@'+fd,subj:'Your subscription renews tomorrow — AED '+RN(199,1499),body:'Your annual plan will auto-renew. To cancel or change your plan, sign in here: <a>'+fd+'/manage</a>',clue:'A surprise renewal price makes you click "cancel" in a hurry — straight onto a fake login at '+fd+'.',act:'Manage subscriptions from your account settings in the real app. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' HR Careers',addr:'talent@'+fd,subj:'We\'d like to interview you — '+b.n,body:'Your profile matched a senior role. Complete the pre-screening form with your Emirates ID and passport copy to book your slot: <a>'+fd+'/apply</a>',clue:'Real recruiters don\'t collect passport and Emirates ID copies on a first contact from '+fd+'.',act:'Apply only via the company\'s official careers page. Never send ID documents to an unverified address. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n,addr:'survey@'+fd,subj:'2-minute survey — get AED '+RN(100,300)+' credit',body:'Tell us about your experience and receive account credit instantly. Just confirm your card to receive the funds: <a>'+fd+'/survey</a>',clue:'No legitimate survey needs your card "to receive" money. Domain: '+fd+'.',act:'Delete it. Rewards are credited to your account by the brand, never via a card form. Report it.',easy:true};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Support',addr:'no-reply@'+fd,subj:'Re: your support ticket #'+RN(100000,999999),body:'Our agent replied to the ticket you opened. View and respond here to keep the ticket open: <a>'+fd+'/ticket</a>',clue:'A reply to a ticket you never opened — and from '+fd+', not '+b.d+'.',act:'If you didn\'t open a ticket, don\'t click. Check support history inside the real account. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Family',addr:'family@'+fd,subj:'You were removed from the family plan',body:'The plan owner removed your access. To restore your membership, re-confirm your login details: <a>'+fd+'/restore</a>',clue:'Loss-of-access panic plus a credential form on '+fd+'. That\'s a harvest page.',act:'Check your plan in the official app. Never "re-confirm" credentials from an email. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Rewards',addr:'points@'+fd,subj:'Your '+RN(2000,50000)+' points expire in 48 hours',body:'Redeem now before they are lost. Sign in to convert points to a voucher: <a>'+fd+'/redeem</a>',clue:'Expiring-points urgency is a lure. The real brand lives at '+b.d+', not '+fd+'.',act:'Log in through the official app to check points. Report and delete the mail.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Compliance',addr:'kyc@'+fd,subj:'Identity verification required to continue',body:'New regulations require you to re-verify. Upload your Emirates ID and a selfie within 24 hours or your account will be frozen: <a>'+fd+'/kyc</a>',clue:'"New regulations" plus an ID upload to '+fd+' is identity theft, not compliance.',act:'Do KYC only inside the official app. Never upload ID to a link from email. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Alerts',addr:'noreply@'+fd,subj:'Action needed: your account is on hold',body:'We could not verify your recent activity. Restore full access by confirming your details: <a>'+fd+'/restore-access</a>',clue:'Vague "could not verify" wording plus a lookalike domain ('+fd+') is a generic harvest page.',act:ACT_REPORT};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Invoicing',addr:'invoice@'+fd,subj:'Invoice INV-'+RN(10000,99999)+' overdue — service suspension',body:'Your outstanding balance of AED '+RN(400,7000)+' is overdue. Settle today to avoid suspension: <a>'+fd+'/pay-now</a>',clue:'Overdue-invoice threats are a top business phishing lure, and this comes from '+fd+'.',act:'Verify invoices in your billing portal or with your account manager on a known number. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Security',addr:'mfa@'+fd,subj:'Your two-factor authentication was disabled',body:'MFA was switched off on your account '+RN(2,50)+' minutes ago. If this wasn\'t you, re-enable it immediately: <a>'+fd+'/mfa</a>',clue:'Scaring you about MFA gets you to log in fast — on the attacker\'s page at '+fd+'.',act:'Open the real app and check security settings yourself. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n,addr:'shared@'+fd,subj:R(['Contract for signature','Purchase order for approval','Statement of account'])+' — action required',body:'A document is waiting for your electronic signature. Sign in with your work email to view it: <a>'+fd+'/sign</a>',clue:'"Sign in with your work email" on a third-party domain ('+fd+') steals corporate credentials.',act:'Open e-signature requests only from the real provider\'s notification in your account. Report to IT/SOC.'};}
+];
+
+/* --- UAE government / utility / telecom impersonation --- */
+const UAE_PHISH=[
+ ()=>{const fd=govFake('uaepass');return{from:'UAE PASS',addr:'noreply@'+fd,subj:'Your UAE PASS account will be suspended',body:'Your digital identity has not been re-verified this year. Re-activate within 24 hours to avoid suspension of all government services: <a>'+fd+'/reactivate</a>',clue:'UAE PASS only lives at uaepass.ae and inside its own app — never at '+fd+'.',act:ACT_GOV,easy:true};},
+ ()=>{const fd=govFake('icp-smartservices');return{from:'ICP — Federal Authority for Identity',addr:'services@'+fd,subj:'Emirates ID '+eid()+' has expired',body:'Your Emirates ID expired. Renew online within 48 hours to avoid a daily fine of AED 20: <a>'+fd+'/renew</a>',clue:'ICP uses icp.gov.ae. A .com lookalike with a fine countdown is a scam.',act:ACT_GOV,easy:true};},
+ ()=>{const fd=govFake('dubaipolice-fines');return{from:'Dubai Police',addr:'traffic@'+fd,subj:'Traffic fine — vehicle '+uaePlate()+' — pay to avoid travel ban',body:'An unpaid fine of AED '+RN(400,3000)+' was recorded on '+R(['Sheikh Zayed Road','Al Khail Road','Emirates Road'])+'. Pay within 24 hours or a travel ban will be applied: <a>'+fd+'/pay-fine</a>',clue:'Dubai Police use dubaipolice.gov.ae and the Dubai Police app. Travel-ban threats over email are a scam.',act:ACT_GOV};},
+ ()=>{const fd=govFake('mohre-labour');return{from:'MOHRE',addr:'wps@'+fd,subj:'Your labour contract requires re-signature',body:'Your employment contract could not be validated in the system. Re-sign within 3 days or your work permit will be cancelled: <a>'+fd+'/sign</a>',clue:'MOHRE is mohre.gov.ae. Work-permit cancellation threats by email are pressure tactics.',act:ACT_GOV};},
+ ()=>{const fd=govFake('salik-recharge');return{from:'Salik',addr:'account@'+fd,subj:'Insufficient Salik balance — AED '+RN(50,200)+' fine pending',body:'Your Salik account balance is negative. Recharge immediately to avoid the AED 50 penalty per crossing: <a>'+fd+'/recharge</a>',clue:'Real Salik is salik.ae and the Salik app. Recharge links by email are a card-harvest.',act:ACT_GOV};},
+ ()=>{const fd=govFake('dewa-billing');return{from:'DEWA',addr:'billing@'+fd,subj:'FINAL NOTICE — disconnection today',body:'Your outstanding DEWA bill of AED '+RN(300,2400)+' is overdue. Electricity and water will be disconnected today unless paid: <a>'+fd+'/pay</a>',clue:'DEWA uses dewa.gov.ae and the DEWA app. Same-day disconnection threats are classic scare tactics.',act:ACT_GOV};},
+ ()=>{const fd=govFake('etisalat-verify');return{from:'Etisalat by e&',addr:'sim@'+fd,subj:'Your SIM will be disconnected — re-register your Emirates ID',body:'Regulations require SIM re-registration. Submit your Emirates ID details within 24 hours or your number will be permanently disconnected: <a>'+fd+'/register</a>',clue:'SIM re-registration happens in the e& app or at a branch — never through an emailed form at '+fd+'.',act:ACT_GOV};},
+ ()=>{const fd=govFake('mahzooz-winners');return{from:'Mahzooz Winners',addr:'claims@'+fd,subj:'CONGRATULATIONS — you won AED '+R(['1,000,000','500,000','100,000']),body:'Your number was drawn in this week\'s draw! To release your prize, pay the AED '+RN(500,2500)+' transfer processing fee and send a copy of your Emirates ID: <a>'+fd+'/claim</a>',clue:'You cannot win a draw you never entered, and real prizes never require you to pay a fee first.',act:'Delete it. Never pay a "release fee" or send ID to claim a prize. Report to eCrime (ecrime.ae).',easy:true};},
+ ()=>{const fd=govFake('centralbank-alerts');return{from:'Central Bank of the UAE',addr:'security@'+fd,subj:'Your bank account has been flagged for suspicious activity',body:'All accounts linked to your Emirates ID will be frozen within 12 hours pending verification. Confirm your banking details to prevent the freeze: <a>'+fd+'/verify</a>',clue:'The Central Bank never emails individuals about their personal accounts, and never asks for banking details.',act:ACT_BANK};},
+ ()=>{const b=R(['Emirates NBD','ADCB','FAB','Mashreq','ADIB']);const fd=govFake(b.toLowerCase().replace(/ /g,''));return{from:b+' Alerts',addr:'alerts@'+fd,subj:'Card blocked — verify to reactivate',body:'A transaction of AED '+RN(1200,9000)+' at '+R(['a Dubai Mall store','an online merchant','a Sharjah ATM'])+' was declined and your card is blocked. Reactivate: <a>'+fd+'/unblock</a>',clue:'Banks never restore cards through an email link, and never ask for card details or OTP.',act:ACT_BANK,easy:true};},
+ ()=>{const fd=govFake('fta-vatrefund');return{from:'Federal Tax Authority',addr:'refunds@'+fd,subj:'VAT refund of AED '+RN(1200,18000)+' approved',body:'Your business is eligible for a VAT refund. Submit your trade licence and bank IBAN to receive the transfer within 3 working days: <a>'+fd+'/refund</a>',clue:'FTA uses tax.gov.ae and the EmaraTax portal. Unsolicited refunds asking for IBAN are fraud.',act:ACT_GOV};},
+ ()=>{const fd=govFake('goldenvisa-uae');return{from:'Golden Visa Processing',addr:'approvals@'+fd,subj:'Your 10-year Golden Visa is pre-approved',body:'Congratulations! Your profile qualifies. Reserve your file number by paying the AED '+RN(1500,4500)+' processing fee today: <a>'+fd+'/reserve</a>',clue:'Golden Visa applications go through ICP/GDRFA or a licensed typing centre — never a pre-approval email with a fee.',act:ACT_GOV};},
+ ()=>{const fd=govFake('rta-nol');return{from:'RTA Dubai',addr:'nol@'+fd,subj:'Nol card blocked — unpaid fare of AED '+RN(20,180),body:'Your Nol card has been suspended for an unpaid journey. Settle now to restore metro and bus access: <a>'+fd+'/settle</a>',clue:'RTA is rta.ae and the RTA/Nol apps. Card suspension emails with payment links are fake.',act:ACT_GOV};},
+ ()=>{const fd=govFake('emiratespost-customs');return{from:'Emirates Post',addr:'customs@'+fd,subj:'Parcel held — customs duty AED '+(RN(3,29)+'.50'),body:'Your shipment from '+R(['China','the UK','the USA'])+' is held at customs. Pay the small duty within 48 hours or the parcel returns to sender: <a>'+fd+'/pay-duty</a>',clue:'A tiny "duty" plus a deadline is designed to make you pay without thinking. Real domain: emiratespost.ae.',act:'Track parcels in the official app only. Never pay customs through an emailed link. Report and delete.'};},
+ ()=>{const fd=govFake('dha-insurance');return{from:'Dubai Health Authority',addr:'insurance@'+fd,subj:'Your health insurance lapses in 3 days',body:'Mandatory health cover linked to your visa is expiring. Renew now to avoid a AED '+RN(500,1000)+' fine: <a>'+fd+'/renew</a>',clue:'DHA uses dha.gov.ae. Insurance renewal is done by your employer or insurer, not via an emailed link.',act:ACT_GOV};},
+ ()=>{const fd=govFake('amer-typing');return{from:'Amer Services',addr:'visa@'+fd,subj:'Visa renewal file incomplete — urgent',body:'Your residency renewal is on hold. Upload your passport, Emirates ID and photo to complete the file today: <a>'+fd+'/upload</a>',clue:'Amer/Tasheel centres don\'t email you for document uploads on a .com lookalike domain.',act:ACT_GOV};},
+ ()=>{const fd=govFake('dubaicourts-notice');return{from:'Dubai Courts',addr:'notice@'+fd,subj:'Legal case filed against you — case no. '+RN(100000,999999),body:'A civil case has been registered under your Emirates ID. Review the summons and respond within 5 days to avoid a judgement in absentia: <a>'+fd+'/case</a>',clue:'Fake court summons create panic. Real notifications arrive through official channels and the Dubai Courts app.',act:ACT_GOV};},
+ ()=>{const fd=govFake('duinternet');return{from:'du',addr:'billing@'+fd,subj:'Home internet payment failed — service ends today',body:'We could not charge your card for AED '+RN(300,900)+'. Update your payment method to keep your Home Internet active: <a>'+fd+'/update</a>',clue:'du lives at du.ae. Same-day cut-off warnings by email are a pressure tactic.',act:'Check your bill in the du app. Never update card details from an email link. Report and delete.'};},
+ ()=>{const fd='dubizzle-'+R(['secure','payments','deals'])+R(['.net','.info','.co']);return{from:'Dubizzle Buyer',addr:'buyer@'+fd,subj:'I want to buy your item — payment sent',body:'I have transferred AED '+RN(500,4500)+' through the Dubizzle Secure system. Click here to release and receive the funds in your account: <a>'+fd+'/release-funds</a>',clue:'"Click to receive money" is always a trap — receiving cash never needs your card or login.',act:'Deal only inside the real platform. Never click a link to "release" a payment. Report the buyer and the mail.',easy:true};},
+ ()=>{const a=R(AREAS),fd='rent-'+R(['dubai','uae','homes'])+R(['.info','.site','.co']);return{from:'Property Agent',addr:'listings@'+fd,subj:'2BHK in '+a+' — AED '+RN(35,75)+'k/year, viewing today',body:'The unit is available and priced below market. To reserve a viewing slot, transfer the AED '+RN(1000,5000)+' booking deposit today — many enquiries pending: <a>'+fd+'/reserve</a>',clue:'Below-market rent plus a deposit before viewing is the classic UAE rental scam.',act:'Never pay before viewing and verifying Ejari. Check the agent\'s RERA/BRN number. Report and delete.',easy:true};},
+ ()=>{const fd=govFake('adnoc-careers');return{from:R(['ADNOC','Emirates Group','Etihad Rail','DP World'])+' Recruitment',addr:'hr@'+fd,subj:'Job offer — AED '+RN(22,40)+',000/month, visa provided',body:'You have been shortlisted without interview. To reserve the position and start visa processing, pay the AED '+RN(750,2500)+' refundable registration fee: <a>'+fd+'/confirm</a>',clue:'No UAE employer charges candidates for a job or a visa. That is illegal here.',act:'Never pay to be hired. Verify openings on the company\'s official careers site. Report to MOHRE and eCrime.',easy:true};},
+ ()=>{const fd=govFake('uaecharity');return{from:R(['Ramadan Relief Fund','UAE Charity Drive','Zakat Appeal']),addr:'donate@'+fd,subj:'Your Zakat can feed '+RN(20,120)+' families this Ramadan',body:'Donate now through our secure portal. Every dirham is delivered directly to families in need: <a>'+fd+'/donate</a>',clue:'Charity fraud spikes during Ramadan. Licensed UAE charities are listed by IACAD/authorities and don\'t cold-email.',act:'Donate only to registered charities via their official app or a verified DubaiNow channel. Report and delete.'};},
+ ()=>{const fd=govFake('sca-invest');return{from:R(['Gulf Capital Advisors','Emirates Wealth Partners','DIFC Trading Desk']),addr:'invest@'+fd,subj:RN(18,45)+'% guaranteed monthly returns — DFSA regulated',body:'Join '+RN(300,4000)+' UAE investors earning fixed monthly returns in gold and crypto. Minimum entry AED '+RN(2000,10000)+'. Limited seats: <a>'+fd+'/join</a>',clue:'Guaranteed high returns do not exist, and fraudsters falsely claim DFSA/SCA regulation.',act:'Verify any firm on the SCA or DFSA public register before sending money. Report to the regulator and eCrime.',easy:true};},
+ ()=>{const fd=govFake('dubainow-services');return{from:'Dubai Now',addr:'alerts@'+fd,subj:'You have '+RN(2,6)+' pending government payments',body:'Outstanding items across DEWA, Salik and traffic fines total AED '+RN(600,4200)+'. Settle all in one click: <a>'+fd+'/pay-all</a>',clue:'DubaiNow is an app, not an email payment link. Bundling "all your fines" is a lure.',act:ACT_GOV};},
+ ()=>{const fd=govFake('sewa-utility');return{from:R(['SEWA','ADDC','FEWA']),addr:'accounts@'+fd,subj:'Meter reading dispute — refund of AED '+RN(200,900),body:'We overcharged your utility account. Provide your IBAN and a copy of your Emirates ID to receive the refund: <a>'+fd+'/refund</a>',clue:'A refund that needs your IBAN and ID copy is data theft dressed up as good news.',act:ACT_GOV};},
+ ()=>{const fd='wa-'+R(['verify','secure','support'])+R(['.info','.cc','.top']);return{from:'WhatsApp Support',addr:'verify@'+fd,subj:'Your WhatsApp will be deactivated in 24 hours',body:'Unusual activity detected. Confirm the 6-digit registration code sent to your number to keep your account active: <a>'+fd+'/confirm</a>',clue:'Sharing your WhatsApp registration code hands your account to the attacker — the #1 account-takeover trick in the region.',act:'Never share a WhatsApp code with anyone. Turn on two-step verification in the app. Report and delete.',easy:true};},
+ ()=>{const fd=govFake('gdrfa-entry');return{from:'GDRFA Dubai',addr:'residency@'+fd,subj:'Overstay fine recorded — AED '+RN(500,4000),body:'Our records show an overstay linked to your file. Settle the fine within 48 hours to avoid a re-entry ban: <a>'+fd+'/settle</a>',clue:'GDRFA uses gdrfad.gov.ae. Ban threats over email with a payment link are fraud.',act:ACT_GOV};},
+ ()=>{const fd=govFake('etisalat-rewards');return{from:R(['Etisalat by e&','du'])+' Rewards',addr:'smiles@'+fd,subj:'You have '+RN(3000,90000)+' points expiring tonight',body:'Redeem your Smiles points for an iPhone or AED '+RN(500,2000)+' credit before midnight: <a>'+fd+'/redeem</a>',clue:'Expiring-points urgency from a lookalike domain is a credential and card harvest.',act:'Open the real Smiles/e& app to check points. Report and delete.'};}
+];
+
+/* --- workplace / BEC / generic scams --- */
 const GEN_PHISH=[
- ()=>{const e=R(EXECS),n=RN(3,8);return{from:e.split(' ')[0]+' — '+e.match(/\((.*)\)/)[1],addr:R(['ceo.office','exec.desk','md.office'])+RN(1,99)+'@gmail.com',subj:R(['Are you at your desk?','Quick favor — urgent','Need this handled quietly']),body:'I\'m heading into a meeting and need something handled discreetly. Buy '+n+' Apple gift cards ('+R(['AED 500','AED 1000'])+' each) for client gifts and send me the codes. Keep this between us for now.',clue:'An "executive" on a Gmail address asking for gift-card codes = textbook CEO/BEC fraud.',act:'Verify out-of-band: call the real person on a known number before acting. Never buy gift cards on an email request. Report to Finance + SOC.',easy:true};},
- ()=>{const fd='hr-'+R(['portal','payroll','benefits'])+R(['.net','.info','.cc']);return{from:'HR Department',addr:'hr@'+fd,subj:'URGENT: '+R(['Salary adjustment','Bonus payout','Contract renewal'])+' — action required',body:'Your '+R(['December','annual','quarterly'])+' payment revision is pending. Log in NOW to confirm your bank details or payment will be delayed: <a>'+fd+'/login</a>',clue:'HR on an external domain asking you to "confirm bank details" is a payroll-diversion scam.',act:'Never change payroll/bank details via an email link. Confirm with HR in person or on a known number. Report it.'};},
- ()=>{const fd='yourc0mpany'+R(['.com','.net']);return{from:'IT Security',addr:'it-security@'+fd,subj:'Mandatory password reset TODAY',body:'Due to a security incident, all staff must reset passwords immediately: <a>'+fd+'/reset</a>. Non-compliance will result in account suspension.',clue:'A zero replaces the "o" — attackers impersonate YOUR OWN company\'s domain.',act:'Reset passwords only via your company\'s known internal portal. Report to the real IT/SOC; if you clicked, reset + tell them at once.'};},
+ ()=>{const e=R(EXECS),n=RN(3,8);return{from:e.split(' ')[0]+' — '+e.match(/\((.*)\)/)[1],addr:R(['ceo.office','exec.desk','md.office'])+RN(1,99)+'@gmail.com',subj:R(['Are you at your desk?','Quick favour — urgent','Need this handled quietly']),body:'I\'m heading into a meeting and need something handled discreetly. Buy '+n+' Apple gift cards ('+R(['AED 500','AED 1000'])+' each) for client gifts and send me the codes. Keep this between us for now.',clue:'An "executive" on a Gmail address asking for gift-card codes is textbook CEO/BEC fraud.',act:'Verify out-of-band: call the real person on a known number before acting. Never buy gift cards on an email request. Report to Finance and the SOC.',easy:true};},
+ ()=>{const fd='hr-'+R(['portal','payroll','benefits'])+R(['.net','.info','.cc']);return{from:'HR Department',addr:'hr@'+fd,subj:'URGENT: '+R(['Salary adjustment','Bonus payout','Contract renewal'])+' — action required',body:'Your '+R(['December','annual','quarterly'])+' payment revision is pending. Log in NOW to confirm your bank details or payment will be delayed: <a>'+fd+'/login</a>',clue:'HR on an external domain asking you to "confirm bank details" is a payroll-diversion scam.',act:'Never change payroll or bank details via an email link. Confirm with HR in person or on a known number. Report it.'};},
+ ()=>{const fd='yourc0mpany'+R(['.com','.net']);return{from:'IT Security',addr:'it-security@'+fd,subj:'Mandatory password reset TODAY',body:'Due to a security incident, all staff must reset passwords immediately: <a>'+fd+'/reset</a>. Non-compliance will result in account suspension.',clue:'A zero replaces the "o" — attackers impersonate your own company\'s domain.',act:'Reset passwords only via your company\'s known internal portal. Report to the real IT/SOC; if you clicked, reset and tell them at once.'};},
  ()=>{const s=RN(20,58),fd='voip-'+R(['messages','mailbox','audio'])+'-center.com';return{from:'Voicemail Service',addr:'vm-notify@'+fd,subj:'New voicemail (0:'+s+') — listen now',body:'You received a new voicemail from +971-'+RN(2,4)+'-XXX-XX'+RN(10,99)+'. Listen here: <a>'+fd+'/play?msg='+RN(1000,9999)+'</a>',clue:'Fake voicemail links are a top malware-delivery trick.',act:'Check voicemail through your actual phone system, not an email link. Report and delete.'};},
- ()=>{const f=R(JUICY),fd='clouddocs-'+R(['share','files','sync'])+'.net';return{from:'CloudDocs',addr:'share@'+fd,subj:'"'+f+'" was shared with you',body:'A confidential document has been shared with you by a colleague. Sign in with your email password to view: <a>'+fd+'/view</a>',clue:'A juicy filename + "sign in with your EMAIL password" on a third-party site = credential theft.',act:'Real doc-shares never ask for your email password on another domain. Report it; reset your password if you entered it.'};},
+ ()=>{const f=R(JUICY),fd='clouddocs-'+R(['share','files','sync'])+'.net';return{from:'CloudDocs',addr:'share@'+fd,subj:'"'+f+'" was shared with you',body:'A confidential document has been shared with you by a colleague. Sign in with your email password to view: <a>'+fd+'/view</a>',clue:'A juicy filename plus "sign in with your EMAIL password" on a third-party site is credential theft.',act:'Real document shares never ask for your email password on another domain. Report it; reset your password if you entered it.'};},
  ()=>{const a=RN(150,300),fd='quick-'+R(['hire','jobs','talent'])+'-network.org';return{from:'Talent Acquisition',addr:'careers@'+fd,subj:'Job offer — AED '+RN(18,35)+',000/month, no interview needed',body:'Your profile impressed our client! To reserve your position, pay a refundable AED '+a+' registration fee: <a>'+fd+'/register</a>',clue:'Legitimate employers never charge you to be hired.',act:'Don\'t pay anything. Verify the company independently. Report the scam and delete.',easy:true};},
- ()=>{const fd='office-'+R(['facilities','parking','building'])+'-mgmt.com';return{from:'Facilities Team',addr:'parking@'+fd,subj:'Your car will be towed within 1 hour',body:'Your vehicle is parked in a reserved zone. Pay the AED '+RN(50,200)+' release fee immediately to avoid towing: <a>'+fd+'/pay</a>',clue:'Panic + a payment link from a random external domain. Real facilities would just call.',act:'Don\'t pay online. Confirm with building management directly. Report and delete.'};},
- ()=>{const n=R(NAMES);return{from:n+' (new number)',addr:'sms-gateway@textforward'+R(['.cc','.info']),subj:'Fwd: it\'s me — new phone',body:'"Hi, it\'s me. I dropped my phone in water, this is my new number. I need you to transfer AED '+RN(500,3000)+' urgently, I\'ll explain later."',clue:'The "new number + urgent money" impersonation scam.',act:'Call the person on their OLD number to verify before sending anything. Never transfer money on an unverified message.'};},
+ ()=>{const fd='office-'+R(['facilities','parking','building'])+'-mgmt.com';return{from:'Facilities Team',addr:'parking@'+fd,subj:'Your car will be towed within 1 hour',body:'Your vehicle is parked in a reserved zone. Pay the AED '+RN(50,200)+' release fee immediately to avoid towing: <a>'+fd+'/pay</a>',clue:'Panic plus a payment link from a random external domain. Real facilities would just call.',act:'Don\'t pay online. Confirm with building management directly. Report and delete.'};},
+ ()=>{const n=R(NAMES);return{from:n+' (new number)',addr:'sms-gateway@textforward'+R(['.cc','.info']),subj:'Fwd: it\'s me — new phone',body:'"Hi, it\'s me. I dropped my phone in water, this is my new number. I need you to transfer AED '+RN(500,3000)+' urgently, I\'ll explain later."',clue:'The "new number plus urgent money" impersonation scam.',act:'Call the person on their OLD number to verify before sending anything. Never transfer money on an unverified message.'};},
  ()=>{const fd='wifi-'+R(['dwtc','expo','event'])+'-login.com';return{from:'Venue WiFi',addr:'access@'+fd,subj:'Re-authenticate to keep your WiFi session',body:'Your conference WiFi session expired. Re-enter your email and password to reconnect: <a>'+fd+'/auth</a>',clue:'Event WiFi never needs your EMAIL password — a very on-theme trap for GISEC.',act:'Never give email credentials to a WiFi portal. Reconnect via the official captive page only. Report it.'};},
- ()=>{return{from:'Crypto Rewards',addr:'airdrop@'+R(['btc','eth','coin'])+'-'+R(['giveaway','bonus'])+'.io',subj:'Your wallet qualifies for a '+RN(2,10)+'x airdrop',body:'Connect your wallet and approve the transaction to receive your bonus tokens instantly. Limited to the first '+RN(100,500)+' users!',clue:'"Connect wallet and approve" drains the wallet. There are no free multiplier airdrops.',act:'Never connect/approve from an unsolicited link. Revoke approvals if you did, and move funds to a fresh wallet.',easy:true};}];
+ ()=>{return{from:'Crypto Rewards',addr:'airdrop@'+R(['btc','eth','coin'])+'-'+R(['giveaway','bonus'])+'.io',subj:'Your wallet qualifies for a '+RN(2,10)+'x airdrop',body:'Connect your wallet and approve the transaction to receive your bonus tokens instantly. Limited to the first '+RN(100,500)+' users!',clue:'"Connect wallet and approve" drains the wallet. There are no free multiplier airdrops.',act:'Never connect or approve from an unsolicited link. Revoke approvals if you did, and move funds to a fresh wallet.',easy:true};},
+ ()=>{const v=R(['Al Futtaim Logistics','Gulf Office Supplies','Emirates Facilities Co','Desert Tech Trading']),fd=v.toLowerCase().replace(/ /g,'')+R(['-invoices.com','-billing.net','.co']);return{from:v+' Accounts',addr:'accounts@'+fd,subj:'Updated bank details for invoice INV-'+RN(2000,9999),body:'Please note our banking details have changed due to an audit. Kindly remit the outstanding AED '+RN(15000,180000)+' to the new IBAN attached. Apologies for the short notice.',clue:'"Our bank details changed" is invoice-redirection fraud — the single most expensive scam for UAE businesses.',act:'Never change a supplier IBAN from an email. Call the supplier on the number you already have on file to verify. Escalate to Finance and the SOC.',easy:true};},
+ ()=>{const n=R(NAMES);return{from:'IT Service Desk',addr:'servicedesk@'+R(['itsupport-helpdesk.net','service-desk-portal.info']),subj:'Your mailbox is over quota — messages are being held',body:'You have '+RN(12,80)+' undelivered messages. Increase your mailbox size by validating your account: <a>mailbox-quota-fix.net/validate</a>',clue:'Quota warnings on an external domain are one of the oldest credential-harvest lures still working today.',act:'Check mailbox size in Outlook or ask IT directly. Never "validate" your account from an email. Report to the SOC.'};},
+ ()=>{return{from:'Microsoft Teams',addr:'noreply@teams-'+R(['notify','messages','invite'])+R(['.net','.info']),subj:'You have '+RN(2,9)+' missed messages from your team',body:'Your colleagues mentioned you while you were away. Sign in to view the conversation: <a>teams-notify.net/open</a>',clue:'The real Teams sends from microsoft.com. A missed-message nudge is designed to feel routine.',act:'Open Teams directly from your desktop or phone app. Never sign in from a notification link. Report it.'};},
+ ()=>{const fd='docu-'+R(['sign','esign','approve'])+R(['.info','.co','.net']);return{from:'DocuSign',addr:'dse@'+fd,subj:R(['Employment contract','NDA','Purchase agreement'])+' — please sign',body:'A document requires your signature before end of day. Review and sign securely: <a>'+fd+'/review</a>',clue:'E-signature lures are extremely effective at work. The real service does not use '+fd+'.',act:'Open the signing request from the provider\'s official site by typing it yourself, or confirm with the sender. Report it.'};},
+ ()=>{return{from:'Payroll Notification',addr:'payroll@'+R(['wps-salary.net','salary-portal.info','payslip-online.co']),subj:'Your '+R(['January','February','March'])+' payslip is ready',body:'Your WPS salary transfer has been processed. View your payslip and confirm receipt: <a>payslip-online.co/view</a>',clue:'Payslip bait works because everyone wants to check their pay — but the domain isn\'t your employer\'s.',act:'Open payslips only in your company HR system. Report to HR and the SOC.'};},
+ ()=>{const n=R(NAMES);return{from:n+' (IT Support)',addr:'remote-help@'+R(['quicksupport-desk.net','anydesk-session.info']),subj:'Remote session requested to fix your laptop',body:'Following your reported issue, please install our remote tool and share the 9-digit code so we can connect: <a>quicksupport-desk.net/agent</a>',clue:'Unrequested "remote support" plus a session code is how tech-support scammers take over machines.',act:'Never install remote tools or share session codes unless YOU opened the ticket and called IT yourself. Report immediately.',easy:true};},
+ ()=>{return{from:'Security Awareness Team',addr:'training@'+R(['compliance-lms.net','securitytraining-portal.info']),subj:'OVERDUE: mandatory security training — account lock in 24h',body:'You have not completed this quarter\'s awareness module. Log in with your network credentials to complete it now: <a>compliance-lms.net/login</a>',clue:'The irony is deliberate — fake "security training" pages harvest the credentials the training is about.',act:'Access training only through your company portal/SSO. Report this to the real security team.'};},
+ ()=>{const f=R(JUICY);return{from:'Scanner',addr:'scan@'+R(['scanner-relay.net','officescan-docs.info']),subj:'Scanned document from '+R(['MFP-Reception','XEROX-3F','Canon-Admin']),body:'A document was scanned and sent to you: "'+f+'". Open the attachment to view. Sign in if prompted.',clue:'Office-printer notifications are trusted and rarely questioned, which is exactly why attackers copy them.',act:'Check with reception or the person who scanned it. Never sign in from a scanner notification. Report to the SOC.'};},
+ ()=>{return{from:'Calendar Invite',addr:'invite@'+R(['meet-scheduler.net','calendar-sync.info']),subj:R(['Performance review — confidential','Restructuring discussion','Your role in the new org'])+' — '+R(['tomorrow','Monday'])+' 9:00',body:'Your attendance is required. Review the agenda document before the meeting: <a>meet-scheduler.net/agenda</a>',clue:'Emotionally loaded meeting subjects make people click before thinking.',act:'Check your real calendar. If it isn\'t there, it isn\'t real. Report to the SOC.'};},
+ ()=>{const n=R(NAMES);return{from:n,addr:n.toLowerCase()+'@'+R(['gmail.com','outlook.com']),subj:'Re: '+R(['our conversation at GISEC','the proposal','following up']),body:'Great meeting you at the stand! As promised, here is the pricing deck and our company profile: <a>shared-docs-view.net/deck</a>. Let me know your thoughts.',clue:'Attackers exploit events — a "nice to meet you" follow-up feels natural and lowers your guard.',act:'Verify the person on LinkedIn or the card they gave you before opening anything. Report suspicious follow-ups.'};}
+];
+
+/* --- legitimate: brand --- */
 const LEGIT_T=[
  b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Your order has shipped',body:'Your order #'+RN(100,999)+'-'+RN(1000,9999)+' has shipped and will arrive '+R(['tomorrow','within 2 days'])+'. Track it in Your Orders in the app.',clue:'Real domain ('+b.d+'), points you to the app, asks for nothing.',act:ACT_LEGIT}),
  b=>({from:b.n,addr:'account-security-noreply@'+b.d,subj:'New sign-in on '+R(['Windows','iPhone','Android','Mac']),body:'Your account was signed in on a new device. If this was you, no action is needed. Review activity any time in your account settings.',clue:'Genuine '+b.d+', and crucially it says "no action needed" — no link demanding credentials.',act:ACT_LEGIT}),
  b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Your verification code',body:'Your one-time code is '+RN(100,999)+' '+RN(100,999)+'. It expires in 10 minutes. We will never ask you to share this code with anyone.',clue:'A code you requested, from the real domain, with a "never share" warning.',act:'Use the code yourself in the app you were logging into. Never forward it to anyone.'}),
  b=>({from:b.n,addr:'receipts@'+b.d,subj:'Payment received — thank you',body:'We\'ve received your payment of AED '+RN(19,199)+'.00 for your subscription. No further action is required. Manage your plan in account settings.',clue:'Real domain, states a fact, requests nothing.',act:ACT_LEGIT}),
  b=>({from:b.n,addr:'news@'+b.d,subj:R(['Your weekly digest','What\'s new this month','Product updates']),body:'Here\'s what\'s new: '+RN(2,8)+' features shipped, plus tips from the community. Read at your leisure — or unsubscribe below.',clue:'Newsletter from the authentic domain. Boring is usually safe.',act:'Safe to read. If you don\'t want it, use the real unsubscribe link at the bottom.'}),
- b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Reminder: your '+R(['subscription','membership'])+' renews on the '+RN(1,28)+'th',body:'Your plan renews automatically. No action is needed. To make changes, visit your account settings in the app.',clue:'Renewal notice with no link demanding your card = normal.',act:ACT_LEGIT})];
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Reminder: your '+R(['subscription','membership'])+' renews on the '+RN(1,28)+'th',body:'Your plan renews automatically. No action is needed. To make changes, visit your account settings in the app.',clue:'Renewal notice with no link demanding your card is normal.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Your statement for '+R(['January','February','March','April'])+' is ready',body:'Your monthly statement is available. Sign in to the app to view it. We never include account details in email.',clue:'Real domain, and it explicitly avoids putting sensitive data in the mail.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'support@'+b.d,subj:'We\'ve closed your support ticket #'+RN(10000,99999),body:'Glad we could help. If the issue returns, just reply to this email and we\'ll reopen the ticket.',clue:'A closing note from the genuine domain, with no link and no data request.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Scheduled maintenance on '+R(['Saturday','Sunday'])+' 02:00–04:00 GST',body:'Some services may be briefly unavailable during maintenance. No action is required from you.',clue:'Informational notice from '+b.d+' that asks nothing of you.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Privacy policy update effective '+RN(1,28)+'/'+RN(1,12),body:'We\'re updating our privacy policy. A summary of changes is available in the app. Continued use means acceptance — nothing to do right now.',clue:'Policy updates are routine, come from the real domain, and never need credentials.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Thanks for your review',body:'We appreciate you rating your recent experience '+RN(3,5)+' stars. Your feedback helps other customers.',clue:'Harmless acknowledgement from the authentic domain.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Your download is ready',body:'The file you requested from your account is ready in your dashboard. Sign in to the app when convenient — no rush and no deadline.',clue:'No urgency, no credential request, real domain.',act:ACT_LEGIT})
+];
+
+/* --- legitimate: UAE services --- */
+const UAE_LEGIT=[
+ ()=>({from:'DEWA',addr:'no-reply@dewa.gov.ae',subj:'Your DEWA bill for '+R(['January','February','March'])+' is ready',body:'Your consumption bill of AED '+RN(180,1400)+' is available in the DEWA app or on dewa.gov.ae. Due on the '+RN(10,25)+'th.',clue:'Genuine .gov.ae domain, standard billing cycle, points to the official app.',act:ACT_LEGIT}),
+ ()=>({from:'Salik',addr:'no-reply@salik.ae',subj:'Salik statement — '+RN(8,60)+' crossings',body:'Your monthly Salik statement is available in the Salik app. Current balance: AED '+RN(20,300)+'.00.',clue:'Real salik.ae domain, a statement rather than a demand.',act:ACT_LEGIT}),
+ ()=>({from:'RTA Dubai',addr:'no-reply@rta.ae',subj:'Vehicle registration renewal due next month',body:'Registration for plate '+uaePlate()+' expires next month. Renew via the RTA app, DubaiNow, or any authorised centre.',clue:'Authentic rta.ae, gives you a month\'s notice and multiple official channels — no panic, no link demanding payment.',act:ACT_LEGIT}),
+ ()=>({from:'UAE PASS',addr:'no-reply@uaepass.ae',subj:'Sign-in request approved',body:'You approved a sign-in to a government service at '+RN(8,20)+':'+RN(10,59)+'. If this wasn\'t you, open the UAE PASS app and review your activity.',clue:'Real uaepass.ae, confirms something you did, and directs you to the app rather than a link.',act:ACT_LEGIT}),
+ ()=>({from:'Emirates NBD',addr:'no-reply@emiratesnbd.com',subj:'Debit card transaction — AED '+RN(25,900)+'.'+RN(10,99),body:'Purchase at '+R(['Carrefour MOE','ENOC','Talabat','Union Coop'])+'. Available balance can be viewed in the ENBD app. We never ask for your OTP or PIN.',clue:'Genuine bank domain, a factual alert, and an explicit "we never ask for OTP" line.',act:ACT_LEGIT}),
+ ()=>({from:'Etisalat by e&',addr:'no-reply@etisalat.ae',subj:'Your bill is ready — AED '+RN(150,700),body:'View and pay in the e& UAE app. Autopay is active on your account, so no action is needed.',clue:'Real etisalat.ae, no threat, no link asking for card details.',act:ACT_LEGIT}),
+ ()=>({from:'Emirates',addr:'no-reply@emirates.com',subj:'Online check-in is open — EK'+RN(100,999),body:'Check in now via the Emirates app or emirates.com. Your Skywards number is on your booking.',clue:'Authentic emirates.com pointing you to the official app.',act:ACT_LEGIT}),
+ ()=>({from:'Careem',addr:'receipts@careem.com',subj:'Your trip receipt — AED '+RN(15,80)+'.'+RN(10,99),body:'Thanks for riding! Trip from '+R(AREAS)+' to '+R(['DWTC','Downtown','DXB Terminal 3','Expo City'])+'. Charged to your saved card.',clue:'Real careem.com receipt, informational only.',act:ACT_LEGIT}),
+ ()=>({from:'noon',addr:'no-reply@noon.com',subj:'Out for delivery — order '+RN(100000,999999),body:'Your order will arrive today between '+RN(9,17)+':00 and '+RN(18,21)+':00. Track it in the noon app.',clue:'Genuine noon.com, tracking through the app, nothing requested.',act:ACT_LEGIT}),
+ ()=>({from:'ICP',addr:'no-reply@icp.gov.ae',subj:'Emirates ID application status updated',body:'Your application has moved to "under process". Track it on icp.gov.ae or in the ICP UAE app using your application number.',clue:'Real .gov.ae domain, a status update with no deadline threat and no payment link.',act:ACT_LEGIT}),
+ ()=>({from:'Dubai Police',addr:'no-reply@dubaipolice.gov.ae',subj:'Your service request has been completed',body:'The certificate you requested is ready to download in the Dubai Police app.',clue:'Authentic dubaipolice.gov.ae, refers to something you requested, directs to the official app.',act:ACT_LEGIT}),
+ ()=>({from:'Talabat',addr:'no-reply@talabat.com',subj:'Order delivered — rate your experience',body:'Hope you enjoyed your order from '+R(['Al Safadi','Ravi Restaurant','Zaroob','Operation Falafel'])+'. Rate it in the app.',clue:'Real talabat.com, a post-delivery nudge with nothing to log into.',act:ACT_LEGIT}),
+ ()=>({from:'Emirates Post',addr:'no-reply@emiratespost.ae',subj:'Shipment '+R(['EP','RA'])+RN(100000000,999999999)+'AE out for delivery',body:'Your parcel is with the courier and will be delivered today. No fees are due.',clue:'Authentic emiratespost.ae, and it explicitly states no fees are due.',act:ACT_LEGIT}),
+ ()=>({from:'Dubai Health Authority',addr:'no-reply@dha.gov.ae',subj:'Appointment confirmed — '+R(['Rashid Hospital','Latifa Hospital','Dubai Hospital']),body:'Your appointment is confirmed for '+RN(1,28)+'/'+RN(1,12)+' at '+RN(8,16)+':00. Manage it in the DHA app.',clue:'Real .gov.ae domain confirming something you booked.',act:ACT_LEGIT}),
+ ()=>({from:'flydubai',addr:'no-reply@flydubai.com',subj:'Booking confirmed — FZ'+RN(100,999),body:'Your booking reference is '+R(['K','L','M','P'])+RN(10000,99999)+'. Manage your booking in the flydubai app.',clue:'Genuine flydubai.com booking confirmation.',act:ACT_LEGIT}),
+ ()=>({from:'ADCB',addr:'no-reply@adcb.com',subj:'Standing instruction executed',body:'Your scheduled transfer of AED '+RN(500,9000)+' was completed. View details in ADCB Personal Internet Banking.',clue:'Real adcb.com, confirms a transfer you set up, asks for nothing.',act:ACT_LEGIT})
+];
+
+/* --- legitimate: internal / workplace --- */
 const GEN_LEGIT=[
  ()=>({from:'IT Helpdesk',addr:'helpdesk@yourcompany.com',subj:'Scheduled maintenance '+R(['Saturday','Sunday'])+' 2AM–4AM',body:'Email services will be briefly unavailable during scheduled maintenance this weekend. No action is required.',clue:'Internal domain, informational, asks for nothing.',act:ACT_LEGIT}),
  ()=>{const n=R(NAMES);return{from:n+' ('+R(['Finance','HR','Ops'])+')',addr:n.toLowerCase()+'@yourcompany.com',subj:R(['All-hands moved to 3PM','Team lunch Thursday','Office closed for public holiday']),body:R(['Quick heads up — today\'s all-hands is moved to 3PM, same room.','We\'re doing team lunch Thursday 12:30 at the usual place. RSVP by tomorrow!','Reminder: office closed Monday for the public holiday. Enjoy the long weekend!']),clue:'Internal address, everyday content, nothing sensitive requested.',act:ACT_LEGIT};},
  ()=>({from:'Finance Team',addr:'finance@yourcompany.com',subj:'Expense report EXP-'+RN(1000,9999)+' approved',body:'Your expense report (AED '+RN(80,900)+'.00) has been approved and will be reimbursed with your next salary.',clue:'Internal, no links, no data requested.',act:ACT_LEGIT}),
  ()=>{const n=R(NAMES);return{from:'Zoom',addr:'no-reply@zoom.us',subj:'Reminder: "'+R(['Vendor sync','Sprint review','1:1 with '+n])+'" starts in 30 minutes',body:'Your scheduled meeting begins at '+RN(9,16)+':00. Meeting ID: '+RN(800,999)+' '+RN(1000,9999)+' '+RN(1000,9999)+'.',clue:'zoom.us is Zoom\'s real domain; a simple calendar reminder.',act:ACT_LEGIT};},
  ()=>({from:'GitHub',addr:'noreply@github.com',subj:'[repo] Pull request #'+RN(50,600)+' merged',body:'Your pull request "'+R(['Fix login validation','Update dependencies','Refactor auth module'])+'" was merged into main by your teammate.',clue:'Routine developer notification from the real github.com.',act:ACT_LEGIT}),
- ()=>({from:'Emirates',addr:'no-reply@emirates.com',subj:'Check in now for flight EK'+RN(100,999),body:'Online check-in is open for your flight. Check in via the Emirates app or emirates.com.',clue:'Genuine domain, directs you to the official app/site.',act:ACT_LEGIT}),
- ()=>({from:'Careem',addr:'receipts@careem.com',subj:'Your trip receipt — AED '+RN(15,80)+'.'+RN(10,99),body:'Thanks for riding! Trip from '+R(['Media City','Marina','Deira','JLT'])+' to '+R(['DWTC','Downtown','Airport'])+'. Total charged to your saved card.',clue:'Real careem.com receipt, informational only.',act:ACT_LEGIT})];
-function phishPool(){return BRANDS.length*PHISH_T.length*5+GEN_PHISH.length*20+BRANDS.length*LEGIT_T.length+GEN_LEGIT.length*15;}
-const phUsed=new Set();
-function genEmail(cardNo){for(let tr=0;tr<30;tr++){const wantPhish=Math.random()<0.54;let e,key;
-  if(wantPhish){if(Math.random()<0.72){const b=R(BRANDS),ti=RN(0,PHISH_T.length-1);e=PHISH_T[ti](b);key='bp'+ti+b.n;}else{const ti=RN(0,GEN_PHISH.length-1);e=GEN_PHISH[ti]();key='gp'+ti;}e.phish=true;}
-  else{if(Math.random()<0.6){const b=R(BRANDS),ti=RN(0,LEGIT_T.length-1);e=LEGIT_T[ti](b);key='bl'+ti+b.n;}else{const ti=RN(0,GEN_LEGIT.length-1);e=GEN_LEGIT[ti]();key='gl'+ti;}e.phish=false;}
-  if(cardNo<4&&e.phish&&!e.easy)continue;if(!phUsed.has(key)){phUsed.add(key);if(phUsed.size>60)phUsed.clear();return e;}}
- const b=R(BRANDS);const e=PHISH_T[0](b);e.phish=true;return e;}
+ ()=>({from:'HR Department',addr:'hr@yourcompany.com',subj:'Annual leave request approved',body:'Your leave from '+RN(1,20)+'/'+RN(1,12)+' to '+RN(21,28)+'/'+RN(1,12)+' has been approved by your manager. Enjoy!',clue:'Internal HR system notification about something you submitted.',act:ACT_LEGIT}),
+ ()=>({from:'Facilities',addr:'facilities@yourcompany.com',subj:'Visitor parking closed '+R(['Tuesday','Wednesday'])+' for maintenance',body:'Please use the P2 level or street parking that day. Sorry for the inconvenience.',clue:'Internal notice, purely informational.',act:ACT_LEGIT}),
+ ()=>({from:'Security Operations',addr:'soc@yourcompany.com',subj:'Reminder: phishing simulation results',body:'Our latest awareness exercise is complete — '+RN(88,98)+'% of staff reported the test mail correctly. Thanks for staying sharp.',clue:'Internal SOC address, reports a result, asks nothing.',act:ACT_LEGIT}),
+ ()=>{const n=R(NAMES);return{from:n+' (Procurement)',addr:n.toLowerCase()+'@yourcompany.com',subj:'PO-'+RN(4000,9999)+' approved',body:'Your purchase order has been approved and sent to the supplier. Delivery expected in '+RN(3,14)+' working days.',clue:'Internal workflow notification, no links or credentials.',act:ACT_LEGIT};},
+ ()=>({from:'Microsoft 365',addr:'no-reply@microsoft.com',subj:'Your monthly usage summary',body:'Here\'s how your team used Microsoft 365 this month. View the report in the admin centre when convenient.',clue:'Authentic microsoft.com, no urgency, no credential request.',act:ACT_LEGIT}),
+ ()=>({from:'Learning & Development',addr:'training@yourcompany.com',subj:'New course available: Secure Coding Basics',body:'A new optional module is live on the internal learning portal. Complete it any time this quarter.',clue:'Internal domain, optional, no deadline threat.',act:ACT_LEGIT}),
+ ()=>({from:'Slack',addr:'no-reply@slack.com',subj:'Weekly summary for your workspace',body:'You had '+RN(20,300)+' messages across '+RN(3,12)+' channels this week. Open Slack to catch up.',clue:'Real slack.com digest, nothing to act on.',act:ACT_LEGIT}),
+ ()=>({from:'Reception',addr:'reception@yourcompany.com',subj:'Parcel at the front desk for you',body:'A delivery arrived for you this morning. Please collect it from reception before 6PM.',clue:'Internal, mundane, and asks you to do something physical rather than click.',act:ACT_LEGIT}),
+ ()=>({from:'IT Helpdesk',addr:'helpdesk@yourcompany.com',subj:'Your laptop refresh is scheduled',body:'Your device swap is booked for '+R(['Monday','Tuesday','Wednesday'])+' at '+RN(9,16)+':00. Please back up local files beforehand.',clue:'Internal domain, references a known programme, no credentials involved.',act:ACT_LEGIT})
+];
+
+/* --- phish draw engine (bag-based, no repeats) --- */
+/* Pool sizes below are MEASURED, not guessed: generating 20,000 items produced
+   ~14,600 distinct emails, ~11,500 distinct alerts and ~9,600 distinct boards.
+   Reported slightly conservatively. */
+function phishPool(){ return 14500; }
+function genEmail(cardNo){
+  for(let tries=0; tries<12; tries++){
+    const wantPhish = Math.random() < 0.54;
+    let e;
+    if(wantPhish){
+      const r = Math.random();
+      if(r < 0.40){ const b = drawFrom('brand',BRANDS); e = PHISH_T[bag('pt',PHISH_T.length).draw()](b); }
+      else if(r < 0.75){ e = UAE_PHISH[bag('up',UAE_PHISH.length).draw()](); }
+      else { e = GEN_PHISH[bag('gp',GEN_PHISH.length).draw()](); }
+      e.phish = true;
+    } else {
+      const r = Math.random();
+      if(r < 0.40){ const b = drawFrom('brand',BRANDS); e = LEGIT_T[bag('lt',LEGIT_T.length).draw()](b); }
+      else if(r < 0.75){ e = UAE_LEGIT[bag('ul',UAE_LEGIT.length).draw()](); }
+      else { e = GEN_LEGIT[bag('gl',GEN_LEGIT.length).draw()](); }
+      e.phish = false;
+    }
+    // first few cards stay friendly so nobody bounces off the game in the first 10 seconds
+    if(cardNo < 3 && e.phish && !e.easy) continue;
+    return e;
+  }
+  const e = UAE_PHISH[0](); e.phish = true; return e;
+}
+
 
 /* ---------- SOC ---------- */
-const DEPT=['FIN','HR','DEV','OPS','MKT','EXEC','SALES','LEGAL'],HTYPE=['SRV','WKS','DB','WEB','APP'];
+const DEPT=['FIN','HR','DEV','OPS','MKT','EXEC','SALES','LEGAL','PROC','ADMIN'],HTYPE=['SRV','WKS','DB','WEB','APP','VDI'];
 const host=()=>R(DEPT)+'-'+R(HTYPE)+'-'+String(RN(1,29)).padStart(2,'0');
-const UNAMES=['ahmed.k','sara.m','omar.d','fatima.a','j.smith','priya.r','wei.l','layla.h','d.jones','tariq.b','noor.s','hassan.f','elena.v','ravi.p','lucia.g','zainab.q'];
-const user=()=>R(UNAMES),extIP=()=>R(['185','45','103','91','194','23'])+'.'+RN(10,250)+'.'+RN(1,250)+'.'+RN(2,250);
-const FAR=['Kyiv','Lagos','São Paulo','Pyongyang','Minsk','Caracas','Tirana'],CLOUD=['mega.nz','anonfiles.io','file.io','dropmb.com'];
+const UNAMES=['ahmed.k','sara.m','omar.d','fatima.a','j.smith','priya.r','wei.l','layla.h','d.jones','tariq.b','noor.s','hassan.f','elena.v','ravi.p','lucia.g','zainab.q','rashid.a','mei.c','anil.v','grace.o'];
+const user=()=>R(UNAMES),extIP=()=>R(['185','45','103','91','194','23','77','156'])+'.'+RN(10,250)+'.'+RN(1,250)+'.'+RN(2,250);
+const FAR=['Kyiv','Lagos','São Paulo','Pyongyang','Minsk','Caracas','Tirana','Hanoi','Chisinau'];
+const CLOUD=['mega.nz','anonfiles.io','file.io','dropmb.com','transfer.sh'];
 const nightTime=()=>RN(1,4)+':'+String(RN(10,59)).padStart(2,'0')+' AM';
+
 const THREATS=[
- ()=>{const h=host();return{sev:'CRITICAL',src:'EDR',t:'Ransomware behavior on '+h,d:'mass file encryption + shadow copy deletion (vssadmin) on '+h,clue:'Encryption + shadow-copy deletion is ransomware detonating right now.',act:'Escalate P1. Isolate '+h+' from the network immediately, preserve it for forensics, and trigger the ransomware IR playbook.'};},
+ ()=>{const h=host();return{sev:'CRITICAL',src:'EDR',t:'Ransomware behaviour on '+h,d:'mass file encryption plus shadow copy deletion (vssadmin) on '+h,clue:'Encryption combined with shadow-copy deletion is ransomware detonating right now.',act:'Escalate P1. Isolate '+h+' from the network immediately, preserve it for forensics, and trigger the ransomware IR playbook.'};},
  ()=>{const a='svc_'+R(['backup','sync','update'])+RN(2,9);return{sev:'CRITICAL',src:'SIEM',t:'Domain admin added at '+nightTime(),d:'new account "'+a+'" added to Domain Admins outside any change window',clue:'Unplanned domain-admin creation at night is attacker persistence.',act:'Escalate. Disable "'+a+'", review who created it, check for other new admins, and hunt for how they got Domain Admin.'};},
- ()=>{const h=host(),ip=extIP();return{sev:'HIGH',src:'IDS',t:'Outbound beaconing from '+h,d:h+' calling '+ip+' every '+R([30,60,90])+'s with identical '+RN(1,9)+'KB payloads',clue:'Metronome-regular callbacks to a strange IP = command & control.',act:'Escalate. Block '+ip+' at the firewall, isolate '+h+', and analyze the process making the beacon.'};},
- ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'Encoded PowerShell on '+h,d:'powershell -enc JABjAGwAaQ... spawned by WINWORD.EXE ('+user()+')',clue:'Word spawning encoded PowerShell = a malicious macro executing.',act:'Escalate. Isolate '+h+', kill the process tree, decode the command to see intent, and reset '+user()+'\'s credentials.'};},
- ()=>{const u=user(),g=RN(20,60);return{sev:'CRITICAL',src:'DLP',t:g+'GB upload to personal cloud',d:u+"'s workstation uploading archives to "+R(CLOUD)+' at '+nightTime(),clue:'A huge overnight upload to personal cloud is likely data exfiltration.',act:'Escalate. Block the destination, suspend '+u+'\'s sessions, and determine what data left. Loop in Legal/DPO if sensitive.'};},
- ()=>{const u=user(),c=R(FAR);return{sev:'HIGH',src:'SIEM',t:'Impossible travel: '+u,d:'same account: Dubai '+RN(8,11)+':0'+RN(1,9)+', then '+c+' '+RN(8,11)+':'+RN(30,55)+' — both successful',clue:'Nobody flies Dubai→'+c+' in minutes — the credentials are compromised.',act:'Escalate. Force-logout and reset '+u+', revoke tokens, enable/verify MFA, and review what that session accessed.'};},
- ()=>{const h='DC-0'+RN(1,3);return{sev:'CRITICAL',src:'EDR',t:'LSASS memory dump on '+h,d:R(['procdump.exe','rundll32 comsvcs'])+' targeting lsass.exe by non-admin '+user(),clue:'Dumping LSASS is credential theft (Mimikatz-style) on a domain controller.',act:'Escalate P1. Isolate '+h+', treat all DC credentials as exposed, rotate them (incl. krbtgt twice), and hunt lateral movement.'};},
- ()=>{const n=RN(40,90),u=RN(3,9);return{sev:'CRITICAL',src:'Email GW',t:'Live phishing campaign — '+u+' clicks',d:n+' users received "password expiry" mail; '+u+' already clicked the link',clue:'An active campaign with real clicks means accounts may already be compromised.',act:'Escalate. Pull the mail from all inboxes, block the domain, and force password reset + MFA on the '+u+' who clicked.'};},
+ ()=>{const h=host(),ip=extIP();return{sev:'HIGH',src:'IDS',t:'Outbound beaconing from '+h,d:h+' calling '+ip+' every '+R([30,60,90])+'s with identical '+RN(1,9)+'KB payloads',clue:'Metronome-regular callbacks to a strange IP are command and control traffic.',act:'Escalate. Block '+ip+' at the firewall, isolate '+h+', and analyse the process making the beacon.'};},
+ ()=>{const h=host(),u=user();return{sev:'HIGH',src:'EDR',t:'Encoded PowerShell on '+h,d:'powershell -enc JABjAGwAaQ... spawned by WINWORD.EXE ('+u+')',clue:'Word spawning encoded PowerShell means a malicious macro is executing.',act:'Escalate. Isolate '+h+', kill the process tree, decode the command to see intent, and reset '+u+'\'s credentials.'};},
+ ()=>{const u=user(),g=RN(20,60);return{sev:'CRITICAL',src:'DLP',t:g+'GB upload to personal cloud',d:u+'\'s workstation uploading archives to '+R(CLOUD)+' at '+nightTime(),clue:'A huge overnight upload to personal cloud storage is likely data exfiltration.',act:'Escalate. Block the destination, suspend '+u+'\'s sessions, and determine what data left. Loop in Legal/DPO if it is sensitive.'};},
+ ()=>{const u=user(),c=R(FAR);return{sev:'HIGH',src:'SIEM',t:'Impossible travel: '+u,d:'same account: Dubai '+RN(8,11)+':0'+RN(1,9)+', then '+c+' '+RN(8,11)+':'+RN(30,55)+' — both successful',clue:'Nobody flies Dubai to '+c+' in minutes, so the credentials are compromised.',act:'Escalate. Force-logout and reset '+u+', revoke tokens, enable or verify MFA, and review what that session accessed.'};},
+ ()=>{const h='DC-0'+RN(1,3),u=user();return{sev:'CRITICAL',src:'EDR',t:'LSASS memory dump on '+h,d:R(['procdump.exe','rundll32 comsvcs'])+' targeting lsass.exe by non-admin '+u,clue:'Dumping LSASS is credential theft (Mimikatz-style) on a domain controller.',act:'Escalate P1. Isolate '+h+', treat all DC credentials as exposed, rotate them (including krbtgt twice), and hunt lateral movement.'};},
+ ()=>{const n=RN(40,90),u=RN(3,9);return{sev:'CRITICAL',src:'Email GW',t:'Live phishing campaign — '+u+' clicks',d:n+' users received a "password expiry" mail; '+u+' already clicked the link',clue:'An active campaign with real clicks means accounts may already be compromised.',act:'Escalate. Pull the mail from all inboxes, block the domain, and force password reset plus MFA on the '+u+' users who clicked.'};},
  ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'Fake-name persistence on '+h,d:'"'+R(['GoogleUpdatesvc','AdobeSync','OneDriveHelper'])+'" task runs C:\\Users\\Public\\'+R(['svchost','csrss','winlogon'])+'.exe',clue:'System binaries never live in Users\\Public — this is disguised persistence.',act:'Escalate. Isolate '+h+', remove the scheduled task, grab the binary for analysis, and scan the fleet for the same task name.'};},
- ()=>{const h='JUMP-0'+RN(1,3),n=RN(1200,4800);return{sev:'HIGH',src:'IDS',t:'RDP brute force on '+h,d:n+' attempts from '+RN(20,80)+'+ IPs against exposed RDP',clue:'Distributed brute force against internet-facing RDP is a top ransomware entry.',act:'Escalate. Get RDP off the internet (VPN + MFA), block the source IPs, and check for any successful logon on '+h+'.'};},
- ()=>{const d=R(['updates-cdn','metrics-sync','api-relay'])+RN(2,9)+'.com';return{sev:'MEDIUM',src:'Proxy',t:'DNS tunneling suspected',d:RN(3,9)+',000 TXT queries/hour to random subdomains of '+d,clue:'Thousands of TXT queries to one domain is data sneaking out over DNS.',act:'Escalate. Sinkhole/block '+d+', identify the source host, and inspect it for malware doing the tunneling.'};},
- ()=>{const h=R(DEPT)+'-WEB-0'+RN(1,9);return{sev:'HIGH',src:'WAF',t:'SQL injection burst on '+h,d:"payloads ' OR 1=1-- hitting /login at "+RN(80,400)+' req/min from '+extIP(),clue:'High-rate SQLi probing is an active attempt to breach the app/database.',act:'Escalate. Block the source IP, put the WAF rule in blocking mode, and have devs check the endpoint for a successful injection.'};},
- ()=>{return{sev:'CRITICAL',src:'OT/ICS',t:'Unauthorized PLC write',d:'office-network laptop ('+user()+') sent write command to factory PLC-'+RN(1,9),clue:'An office laptop writing to an industrial controller is never normal and can be dangerous.',act:'Escalate P1 to OT security. Isolate the IT/OT path, verify PLC integrity with engineering, and treat safety as the priority.'};},
- ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Off-hours mailbox rule created',d:'new rule on '+u+"'s mailbox auto-forwards finance mail to external gmail",clue:'Auto-forward-to-external rules are a hallmark of Business Email Compromise.',act:'Escalate. Remove the rule, reset '+u+' + revoke tokens, enable MFA, and check for fraudulent invoices/payments.'};},
- ()=>{const h=host();return{sev:'HIGH',src:'AV',t:'Defender disabled on '+h,d:'real-time protection turned off via registry, no ticket, user '+user(),clue:'Attackers disable AV right before the real payload runs.',act:'Escalate. Re-enable protection via policy, isolate '+h+', and hunt for what ran while protection was off.'};}];
+ ()=>{const h='JUMP-0'+RN(1,3),n=RN(1200,4800);return{sev:'HIGH',src:'IDS',t:'RDP brute force on '+h,d:n+' attempts from '+RN(20,80)+'+ IPs against exposed RDP',clue:'Distributed brute force against internet-facing RDP is a top ransomware entry point.',act:'Escalate. Get RDP off the internet (VPN plus MFA), block the source IPs, and check for any successful logon on '+h+'.'};},
+ ()=>{const d=R(['updates-cdn','metrics-sync','api-relay'])+RN(2,9)+'.com';return{sev:'MEDIUM',src:'Proxy',t:'DNS tunnelling suspected',d:RN(3,9)+',000 TXT queries/hour to random subdomains of '+d,clue:'Thousands of TXT queries to one domain is data sneaking out over DNS.',act:'Escalate. Sinkhole or block '+d+', identify the source host, and inspect it for the malware doing the tunnelling.'};},
+ ()=>{const h=R(DEPT)+'-WEB-0'+RN(1,9),ip=extIP();return{sev:'HIGH',src:'WAF',t:'SQL injection burst on '+h,d:'payloads \' OR 1=1-- hitting /login at '+RN(80,400)+' req/min from '+ip,clue:'High-rate SQLi probing is an active attempt to breach the app and its database.',act:'Escalate. Block '+ip+', put the WAF rule in blocking mode, and have developers check the endpoint for a successful injection.'};},
+ ()=>{const u=user();return{sev:'CRITICAL',src:'OT/ICS',t:'Unauthorised PLC write',d:'office-network laptop ('+u+') sent a write command to factory PLC-'+RN(1,9),clue:'An office laptop writing to an industrial controller is never normal and can be physically dangerous.',act:'Escalate P1 to OT security. Isolate the IT/OT path, verify PLC integrity with engineering, and treat safety as the priority.'};},
+ ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Off-hours mailbox rule created',d:'new rule on '+u+'\'s mailbox auto-forwards finance mail to an external gmail address',clue:'Auto-forward-to-external rules are a hallmark of Business Email Compromise.',act:'Escalate. Remove the rule, reset '+u+' and revoke tokens, enable MFA, and check for fraudulent invoices or payments.'};},
+ ()=>{const h=host(),u=user();return{sev:'HIGH',src:'AV',t:'Defender disabled on '+h,d:'real-time protection turned off via registry, no ticket, user '+u,clue:'Attackers disable AV right before the real payload runs.',act:'Escalate. Re-enable protection via policy, isolate '+h+', and hunt for what ran while protection was off.'};},
+ ()=>{const u=user(),n=RN(400,3000);return{sev:'HIGH',src:'SIEM',t:'Password spray against '+n+' accounts',d:'single password tried across the directory from '+extIP()+', '+RN(2,9)+' successes',clue:'One password against many accounts evades lockout — and it already worked on some.',act:'Escalate. Reset the successful accounts, block the source, enforce MFA, and review sign-in logs for what those sessions touched.'};},
+ ()=>{const h=host();return{sev:'CRITICAL',src:'EDR',t:'Cobalt Strike beacon on '+h,d:'named-pipe pattern and sleep/jitter signature matched on '+h,clue:'A commercial C2 framework on an endpoint means a hands-on-keyboard intruder.',act:'Escalate P1. Isolate '+h+', preserve memory, hunt for the same beacon fleet-wide, and start full IR.'};},
+ ()=>{const u=user();return{sev:'CRITICAL',src:'Cloud',t:'MFA method added for '+u,d:'attacker-controlled authenticator registered on '+u+' minutes after a foreign login',clue:'Registering a new MFA device is how attackers make stolen access permanent.',act:'Escalate. Remove the rogue MFA method, reset '+u+', revoke all sessions and tokens, and review the sign-in trail.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'Shadow copies deleted on '+h,d:'wmic shadowcopy delete executed with no backup job running',clue:'Deleting recovery points is what attackers do immediately before encrypting.',act:'Escalate P1. Isolate '+h+' now, verify backup integrity offline, and treat this as pre-ransomware.'};},
+ ()=>{const ip=extIP();return{sev:'HIGH',src:'VPN',t:'VPN login from a known malicious IP',d:'successful VPN authentication from '+ip+', flagged in threat intel as a ransomware affiliate',clue:'A successful login from a known-bad IP means valid credentials are in the wrong hands.',act:'Escalate. Terminate the session, reset the account, block the IP range, and audit everything that session reached.'};},
+ ()=>{const h=host();return{sev:'CRITICAL',src:'EDR',t:'Web shell dropped on '+h,d:R(['cmd.aspx','shell.jsp','up.php'])+' written to the web root, then IIS spawned cmd.exe',clue:'A web server spawning a command shell means remote code execution succeeded.',act:'Escalate P1. Take '+h+' offline, preserve the file, patch the entry vulnerability, and hunt for further access.'};},
+ ()=>{const u=user();return{sev:'HIGH',src:'Cloud',t:'Mass file download from SharePoint',d:u+' downloaded '+RN(800,6000)+' documents in '+RN(4,20)+' minutes, first time ever',clue:'A sudden bulk download far outside a user\'s baseline is exfiltration or a departing-insider grab.',act:'Escalate. Suspend '+u+'\'s sessions, review what was taken, and involve HR/Legal if it is confidential.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'BYOVD driver loaded on '+h,d:'known vulnerable signed driver loaded, followed by an EDR tamper attempt',clue:'Bring-your-own-vulnerable-driver is how modern attackers switch off security tooling.',act:'Escalate. Isolate '+h+', block the driver hash, verify EDR integrity, and hunt the same driver fleet-wide.'};},
+ ()=>{return{sev:'CRITICAL',src:'Cloud',t:'Root/global admin API key created',d:'new access key minted for the root account from '+extIP()+' with no ticket',clue:'A root API key created from an unknown IP hands over the entire cloud tenancy.',act:'Escalate P1. Revoke the key, rotate root credentials, enable MFA on root, and review CloudTrail for what it did.'};},
+ ()=>{const h=host();return{sev:'MEDIUM',src:'EDR',t:'Cryptominer on '+h,d:'sustained 98% CPU with stratum protocol traffic to a mining pool',clue:'Mining malware means someone already has code execution on your estate.',act:'Escalate. Isolate '+h+', remove the miner, and find the entry point — the same hole can deliver worse.'};},
+ ()=>{const u=user();return{sev:'HIGH',src:'Email GW',t:'Invoice fraud attempt against Finance',d:'supplier "bank details changed" mail to '+u+' from a domain registered '+RN(2,9)+' days ago',clue:'A newly registered lookalike domain plus a bank-detail change is invoice-redirection fraud.',act:'Escalate to Finance immediately. Freeze the payment, verify with the supplier on a known number, and block the domain.'};},
+ ()=>{const h='DC-0'+RN(1,3);return{sev:'CRITICAL',src:'SIEM',t:'DCSync replication from a workstation',d:'directory replication rights used from a non-DC host against '+h,clue:'DCSync lets an attacker pull every password hash in the domain, including krbtgt.',act:'Escalate P1. Treat the domain as compromised, rotate krbtgt twice, reset privileged accounts, and begin full IR.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'USB payload executed on '+h,d:'autorun binary launched from a removable drive inserted at '+nightTime(),clue:'An out-of-hours USB execution is a classic drop-attack or insider action.',act:'Escalate. Isolate '+h+', capture the USB contents, identify who inserted it, and enforce device control policy.'};},
+ ()=>{const u=user();return{sev:'HIGH',src:'Cloud',t:'OAuth consent to unknown app',d:u+' granted an unverified third-party app full mailbox and file access',clue:'Malicious OAuth consent gives lasting access without ever needing a password.',act:'Escalate. Revoke the app consent, review what it accessed, reset '+u+', and restrict user consent by policy.'};},
+ ()=>{const h=host();return{sev:'CRITICAL',src:'Backup',t:'Backup repository deletion attempt',d:'bulk delete against the backup server from '+h+' outside any retention job',clue:'Attackers destroy backups first so you have no choice but to pay.',act:'Escalate P1. Stop the deletion, verify immutable/offline copies, isolate '+h+', and treat as active ransomware staging.'};},
+ ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'MFA fatigue push bombing on '+u,d:RN(25,90)+' push notifications sent to '+u+' within '+RN(5,15)+' minutes',clue:'Attackers spam approvals hoping the user taps "yes" just to stop the noise.',act:'Escalate. Contact '+u+' before they approve, reset the password, and switch to number-matching or FIDO2 MFA.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'IDS',t:'Internal port scan from '+h,d:h+' sweeping '+RN(300,4000)+' internal hosts across SMB, RDP and WinRM',clue:'An endpoint scanning the internal network is an attacker mapping where to move next.',act:'Escalate. Isolate '+h+', identify the scanning process, and review whether any connections succeeded.'};},
+ ()=>{const u=user();return{sev:'CRITICAL',src:'Cloud',t:'Conditional Access policy disabled',d:'MFA enforcement policy switched off by '+u+' with no change request',clue:'Turning off Conditional Access removes the control protecting every account at once.',act:'Escalate P1. Re-enable the policy, verify whether '+u+' is compromised, and audit all logins during the gap.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'Credential theft from browsers on '+h,d:'process read Chrome and Edge "Login Data" stores, then archived them',clue:'Harvesting saved browser passwords gives attackers dozens of accounts at once.',act:'Escalate. Isolate '+h+', force password resets for the affected user\'s saved accounts, and enforce MFA.'};},
+ ()=>{const d='paypa1-'+R(['secure','verify'])+'.com';return{sev:'HIGH',src:'Threat Intel',t:'Lookalike domain registered for our brand',d:d+' registered today with an MX record and a cloned login page',clue:'A live lookalike with mail records means a phishing campaign against your staff or customers is imminent.',act:'Escalate. Request takedown, block the domain pre-emptively, warn staff, and monitor for related registrations.'};},
+ ()=>{const h=host();return{sev:'CRITICAL',src:'EDR',t:'Ransom note written on '+h,d:R(['README_RESTORE.txt','HOW_TO_DECRYPT.hta'])+' written to '+RN(200,4000)+' directories',clue:'Ransom notes at scale mean encryption is already in progress or complete.',act:'Escalate P1. Isolate the network segment, activate the IR plan and comms tree, and do not power off machines before forensics advises.'};}
+];
+
 const FPS=[
  ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Failed logins — '+u+' locked out',d:RN(5,12)+' failed attempts right after quarterly password-reset day',clue:'Failed logins immediately after reset day are almost always the user mistyping a new password.',act:'Dismiss (low priority). If it repeats, confirm with the user and help them reset — no incident needed.'};},
- ()=>{return{sev:'LOW',src:'AV',t:'Adware quarantined',d:'PUP.BrowserToolbar removed from a guest laptop, no further activity',clue:'It\'s already quarantined and low-impact — routine cleanup, not an incident.',act:'Dismiss. The control worked as intended; note it and move on.'};},
- ()=>{const n=RN(200,600);return{sev:'MEDIUM',src:'Proxy',t:'Traffic spike to windowsupdate.com',d:n+' endpoints pulling from the official Microsoft CDN after Patch Tuesday',clue:'Patch Tuesday traffic to an official CDN is expected, healthy noise.',act:'Dismiss. Optionally tune the rule so expected update traffic doesn\'t alert next month.'};},
- ()=>{const u=R(['CFO','CTO','HR head','Legal counsel']);return{sev:'LOW',src:'SIEM',t:'VPN login from new device',d:u+' connected from a new '+R(['iPad','MacBook','phone'])+' — MFA passed, geo matches home',clue:'MFA passed and the location matches — a normal new-device login.',act:'Dismiss. If you want certainty, a quick confirmation with the user closes it.'};},
- ()=>{return{sev:'MEDIUM',src:'AV',t:'EICAR test file detected',d:'flagged in \\\\soc\\testing\\ during scheduled AV validation',clue:'EICAR is the harmless industry AV-test file — someone is validating the AV.',act:'Dismiss. Confirm it\'s the scheduled test; no threat.'};},
- ()=>{const h=host();return{sev:'MEDIUM',src:'Vuln Scanner',t:'Port scan from 10.0.'+RN(1,9)+'.'+RN(2,30),d:'internal scanner sweeping '+h+' subnet on its weekly schedule',clue:'The source is your own authorized scanner, running on schedule.',act:'Dismiss. Add the scanner to an allowlist so it stops generating noise.'};},
- ()=>{const h=host(),c='CHG-'+RN(1000,9999);return{sev:'LOW',src:'SIEM',t:h+' rebooted at '+RN(21,23)+':'+RN(10,55),d:'matches approved change ticket '+c+' (maintenance window)',clue:'It maps to an approved change ticket — expected maintenance.',act:'Dismiss. Cross-reference '+c+' and close.'};},
- ()=>{return{sev:'LOW',src:'Email GW',t:'Bulk marketing mail flagged',d:'newsletter from '+R(['adobe.com','linkedin.com','atlassian.com'])+' to '+RN(150,400)+' staff — SPF/DKIM pass',clue:'Authenticated marketing mail belongs in spam handling, not the IR queue.',act:'Dismiss. Tune the filter; not a security incident.'};},
+ ()=>{return{sev:'LOW',src:'AV',t:'Adware quarantined',d:'PUP.BrowserToolbar removed from a guest laptop, no further activity',clue:'It is already quarantined and low impact — routine cleanup, not an incident.',act:'Dismiss. The control worked as intended; note it and move on.'};},
+ ()=>{const n=RN(200,600);return{sev:'MEDIUM',src:'Proxy',t:'Traffic spike to windowsupdate.com',d:n+' endpoints pulling from the official Microsoft CDN after Patch Tuesday',clue:'Patch Tuesday traffic to an official CDN is expected, healthy noise.',act:'Dismiss. Optionally tune the rule so expected update traffic does not alert next month.'};},
+ ()=>{const u=R(['CFO','CTO','HR head','Legal counsel']);return{sev:'LOW',src:'SIEM',t:'VPN login from new device',d:u+' connected from a new '+R(['iPad','MacBook','phone'])+' — MFA passed, geo matches home',clue:'MFA passed and the location matches, so this is a normal new-device login.',act:'Dismiss. If you want certainty, a quick confirmation with the user closes it.'};},
+ ()=>{return{sev:'MEDIUM',src:'AV',t:'EICAR test file detected',d:'flagged in \\\\soc\\testing\\ during scheduled AV validation',clue:'EICAR is the harmless industry AV-test file — someone is validating the AV.',act:'Dismiss. Confirm it is the scheduled test; no threat.'};},
+ ()=>{const h=host();return{sev:'MEDIUM',src:'Vuln Scanner',t:'Port scan from 10.0.'+RN(1,9)+'.'+RN(2,30),d:'internal scanner sweeping the '+h+' subnet on its weekly schedule',clue:'The source is your own authorised scanner, running on schedule.',act:'Dismiss. Add the scanner to an allowlist so it stops generating noise.'};},
+ ()=>{const h=host(),c='CHG-'+RN(1000,9999);return{sev:'LOW',src:'SIEM',t:h+' rebooted at '+RN(21,23)+':'+RN(10,55),d:'matches approved change ticket '+c+' (maintenance window)',clue:'It maps to an approved change ticket, so this is expected maintenance.',act:'Dismiss. Cross-reference '+c+' and close.'};},
+ ()=>{return{sev:'LOW',src:'Email GW',t:'Bulk marketing mail flagged',d:'newsletter from '+R(['adobe.com','linkedin.com','atlassian.com'])+' to '+RN(150,400)+' staff — SPF/DKIM pass',clue:'Authenticated marketing mail belongs in spam handling, not the incident queue.',act:'Dismiss. Tune the filter; this is not a security incident.'};},
  ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Admin '+u+' logged in as root',d:'su to root on the backup server during its backup maintenance window',clue:'Right admin, right server, right window — business as usual.',act:'Dismiss after a quick check that it matches the maintenance schedule.'};},
- ()=>{return{sev:'LOW',src:'AV',t:'Signature update completed',d:'endpoint protection definitions updated fleet-wide, 0 failures',clue:'That\'s a status message, not an alert.',act:'Dismiss. Consider suppressing informational events from the queue.'};},
- ()=>{const u=user();return{sev:'LOW',src:'Email GW',t:u+' reported a newsletter',d:'employee flagged the legitimate HR newsletter as phishing',clue:'Good instinct, wrong target — it\'s verified legitimate.',act:'Dismiss, and thank the user for reporting — that behavior is exactly what you want.'};},
- ()=>{const h=host();return{sev:'MEDIUM',src:'EDR',t:'PsExec run on '+h,d:'launched by IT admin '+user()+' with a linked support ticket INC-'+RN(1000,9999),clue:'An admin tool + valid ticket + known admin = legitimate IT work.',act:'Dismiss after confirming the ticket. Optionally allowlist admin tooling on jump hosts.'};},
- ()=>{const n=RN(30,90);return{sev:'LOW',src:'Backup',t:'Backup window overrun',d:'nightly backup ran '+n+' min long due to data growth; completed OK',clue:'A slow-but-successful backup is an ops capacity issue, not security.',act:'Dismiss. Hand to the ops/backup team to review scheduling.'};}];
-function socPool(){return (THREATS.length+FPS.length)*40;}
-const socUsed=new Set();
-function genAlert(){for(let i=0;i<25;i++){const th=Math.random()<0.52,arr=th?THREATS:FPS,ti=RN(0,arr.length-1),key=(th?'t':'f')+ti;
-  if(socUsed.has(key))continue;socUsed.add(key);if(socUsed.size>=arr.length*1.6)socUsed.clear();const a=arr[ti]();a.threat=th;return a;}
- const a=R([...THREATS,...FPS])();a.threat=Math.random()<0.5;return a;}
+ ()=>{return{sev:'LOW',src:'AV',t:'Signature update completed',d:'endpoint protection definitions updated fleet-wide, 0 failures',clue:'That is a status message, not an alert.',act:'Dismiss. Consider suppressing informational events from the queue.'};},
+ ()=>{const u=user();return{sev:'LOW',src:'Email GW',t:u+' reported a newsletter',d:'employee flagged the legitimate HR newsletter as phishing',clue:'Good instinct, wrong target — the mail is verified legitimate.',act:'Dismiss, and thank the user for reporting. That behaviour is exactly what you want.'};},
+ ()=>{const h=host(),u=user();return{sev:'MEDIUM',src:'EDR',t:'PsExec run on '+h,d:'launched by IT admin '+u+' with a linked support ticket INC-'+RN(1000,9999),clue:'An admin tool plus a valid ticket plus a known admin equals legitimate IT work.',act:'Dismiss after confirming the ticket. Optionally allowlist admin tooling on jump hosts.'};},
+ ()=>{const n=RN(30,90);return{sev:'LOW',src:'Backup',t:'Backup window overrun',d:'nightly backup ran '+n+' minutes long due to data growth; completed OK',clue:'A slow but successful backup is an operations capacity issue, not security.',act:'Dismiss. Hand to the ops/backup team to review scheduling.'};},
+ ()=>{const u=user();return{sev:'MEDIUM',src:'DLP',t:'Large file transfer by '+u,d:RN(2,9)+'GB design assets sent to the approved agency SFTP listed in the vendor register',clue:'Approved destination, known vendor, expected file type — this is the job, not exfiltration.',act:'Dismiss. Confirm the vendor is still on the approved list and close.'};},
+ ()=>{return{sev:'MEDIUM',src:'IDS',t:'Ping sweep from monitoring server',d:'Nagios availability checks across all subnets, unchanged for '+RN(2,6)+' years',clue:'Your own monitoring platform doing exactly what it was built to do.',act:'Dismiss and allowlist the monitoring host so it stops filling the queue.'};},
+ ()=>{const u=user();return{sev:'LOW',src:'Cloud',t:'Impossible travel: '+u,d:u+' shows Dubai and London simultaneously — corporate VPN egress node in London',clue:'Split tunnelling through a corporate VPN egress explains the geography perfectly.',act:'Dismiss. Add the VPN egress ranges to the geo-exception list to stop repeat alerts.'};},
+ ()=>{const h=host();return{sev:'MEDIUM',src:'EDR',t:'Unsigned binary on '+h,d:'an in-house tool built by the '+R(['DEV','FIN'])+' team, hash matches the internal software register',clue:'Unsigned but internally built and registered — a code-signing gap, not an attack.',act:'Dismiss the alert, then raise a low-priority ticket to get internal tools properly signed.'};},
+ ()=>{return{sev:'LOW',src:'WAF',t:'Blocked scanner traffic',d:RN(200,900)+' requests from a known security research crawler, all blocked at the edge',clue:'Internet background noise that the WAF already stopped.',act:'Dismiss. No action needed beyond confirming the block worked.'};},
+ ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'After-hours access by '+u,d:'finance system access at '+RN(21,23)+':00 during documented month-end close',clue:'Month-end close genuinely runs late, and the activity matches the person\'s role.',act:'Dismiss. Consider a scheduled exception window during close periods.'};},
+ ()=>{const h=host();return{sev:'LOW',src:'EDR',t:'New software installed on '+h,d:R(['Slack','Zoom','Notion'])+' installed from the approved corporate software portal',clue:'Self-service install of an approved app through the official portal.',act:'Dismiss. This is the process working correctly.'};},
+ ()=>{return{sev:'MEDIUM',src:'Proxy',t:'Connections to a newly registered domain',d:'the marketing team\'s new campaign microsite, registered by our own agency last week',clue:'New domains are worth checking, but this one belongs to your own marketing campaign.',act:'Dismiss after verifying with marketing, and allowlist the domain.'};},
+ ()=>{const u=user();return{sev:'LOW',src:'SIEM',t:'Password changed for '+u,d:'self-service reset via the official portal, MFA verified, from the office IP range',clue:'MFA-verified self-service reset from inside the office is exactly the intended flow.',act:'Dismiss. No follow-up needed.'};},
+ ()=>{return{sev:'MEDIUM',src:'AV',t:'Penetration testing tool detected',d:'Nmap on the security team\'s own laptop during the scheduled internal assessment',clue:'Your red team running an authorised, scheduled assessment.',act:'Dismiss after confirming the engagement dates. Allowlist the tester\'s host for the window.'};},
+ ()=>{const h=host();return{sev:'LOW',src:'IDS',t:'TLS certificate expiring on '+h,d:'certificate expires in '+RN(14,30)+' days, renewal ticket already open',clue:'A hygiene reminder with a ticket already raised — not a security event.',act:'Dismiss. Ops already owns the renewal.'};},
+ ()=>{return{sev:'MEDIUM',src:'Email GW',t:'DMARC report volume spike',d:'aggregate reports increased after enabling p=quarantine last week',clue:'You changed the policy, so more reports is the expected outcome.',act:'Dismiss. Review the reports for legitimate senders as part of the rollout.'};},
+ ()=>{const u=user();return{sev:'LOW',src:'Cloud',t:'External sharing link created by '+u,d:'link scoped to a named client contact, expires in 7 days, no anonymous access',clue:'Scoped, expiring, named-recipient sharing is the controlled way to collaborate.',act:'Dismiss. The sharing policy is working as designed.'};},
+ ()=>{const h=host();return{sev:'MEDIUM',src:'EDR',t:'PowerShell script executed on '+h,d:'signed configuration script pushed by SCCM during the patch window',clue:'Signed, pushed by your own management platform, inside the window.',act:'Dismiss. Tune the rule to trust signed SCCM deployments.'};},
+ ()=>{return{sev:'LOW',src:'Firewall',t:'Denied inbound traffic spike',d:RN(5,40)+',000 packets dropped at the perimeter from internet background scanning',clue:'The firewall denied everything — this is the internet being the internet.',act:'Dismiss. Only investigate if something starts getting through.'};}
+];
+
+function socPool(){ return 11500; }
+function genAlert(){
+  const wantThreat = Math.random() < 0.52;
+  const a = wantThreat ? THREATS[bag('th',THREATS.length).draw()]() : FPS[bag('fp',FPS.length).draw()]();
+  a.threat = wantThreat;
+  return a;
+}
+
 
 /* ---------- BREACH ---------- */
 const pick3=arr=>{const c=arr.slice();for(let i=c.length-1;i>0;i--){const j=RN(0,i);[c[i],c[j]]=[c[j],c[i]];}return c.slice(0,3);};
 const ARCH=[
- {q:()=>'Which host does a pentester attack first?',bad:()=>({ico:'📠',name:R(['OLD-FTP','LEGACY-FTP','ARCHIVE-01']),desc:'Public FTP, anonymous login ON, '+RN(2007,2011)+' build',tag:'DMZ',clue:'Anonymous FTP on a 15-year-old server is an instant, no-password foothold.',act:'Fix: disable anonymous FTP, retire the legacy box or move it off the internet, and patch/replace the OS.'}),decoys:[{ico:'🖥️',name:'WEB-01',desc:'Patched, WAF in front, HTTPS only',tag:'DMZ'},{ico:'🗄️',name:'DB-PROD',desc:'Internal only, no public route',tag:'INTERNAL'},{ico:'🔒',name:'VPN-GW',desc:'MFA enforced, fully updated',tag:'EDGE'},{ico:'📧',name:'MAIL-01',desc:'Hardened, TLS, patched monthly',tag:'DMZ'},{ico:'🧮',name:'APP-07',desc:'Patched, behind reverse proxy',tag:'INTERNAL'}]},
- {q:()=>'Weakest credential to exploit?',bad:()=>({ico:'👤',name:R(['admin / admin','root / toor','admin / password']),desc:'Default creds on the '+R(['router','switch','printer'])+' admin panel',tag:'DEFAULT',clue:'Default credentials are the first thing attackers try — and they work far too often.',act:'Fix: change all default passwords, enforce a strong password policy + MFA, and audit devices for factory defaults.'}),decoys:[{ico:'👤',name:'j.smith',desc:'22-char passphrase + hardware key',tag:'USER'},{ico:'👤',name:'svc_sql',desc:'Rotated weekly, vaulted',tag:'SERVICE'},{ico:'👤',name:'ceo',desc:'MFA + passkey only',tag:'EXEC'},{ico:'👤',name:'backup_op',desc:'Random 32-char, in PAM',tag:'SERVICE'},{ico:'👤',name:'admin_ad',desc:'Smartcard-only login',tag:'ADMIN'}]},
- {q:()=>'Which service exposes the network?',bad:()=>R([{ico:'🖧',name:'RDP 3389',desc:'Open to the internet, no MFA',tag:'PORT',clue:'Internet-facing RDP with no MFA is the #1 ransomware entry point.',act:'Fix: put RDP behind a VPN, require MFA, restrict source IPs, and enable account lockout.'},{ico:'🗂️',name:'SMB 445',desc:'Exposed to the internet, SMBv1 on',tag:'PORT',clue:'SMBv1 on the open internet invites EternalBlue-style wormable ransomware.',act:'Fix: block 445 at the edge, disable SMBv1 everywhere, and patch.'},{ico:'🐚',name:'Telnet 23',desc:'Open, plaintext, no encryption',tag:'PORT',clue:'Telnet sends credentials in clear text and should never be exposed.',act:'Fix: disable Telnet, use SSH with keys, and firewall the port.'}]),decoys:[{ico:'🌐',name:'HTTPS 443',desc:'TLS 1.3, cert valid',tag:'PORT'},{ico:'📧',name:'SMTP 25',desc:'Relay locked, SPF/DKIM set',tag:'PORT'},{ico:'🔑',name:'SSH 22',desc:'Key-only, root login disabled',tag:'PORT'},{ico:'🔐',name:'IMAPS 993',desc:'TLS only, MFA on mailboxes',tag:'PORT'}]},
- {q:()=>'Pick the social-engineering target.',bad:()=>R([{ico:'📞',name:R(['New Intern','Temp Hire','Day-3 Joiner']),desc:'Eager to help, no security training yet',tag:'STAFF',clue:'Untrained and eager to please makes them the easiest person to manipulate.',act:'Fix: security onboarding from day one, a clear "verify before you act" culture, and an easy way to report.'},{ico:'📞',name:'Reception',desc:'Answers every call, holds every door',tag:'STAFF',clue:'The front desk is friendly by design — perfect for pretexting and tailgating.',act:'Fix: visitor verification procedures, anti-tailgating training, and a script for unusual requests.'}]),decoys:[{ico:'🛡️',name:'SOC Analyst',desc:'Phishing-aware, reports tests',tag:'STAFF'},{ico:'💼',name:'CISO',desc:'Runs the awareness program',tag:'STAFF'},{ico:'⚙️',name:'Sysadmin',desc:'Verifies every request by phone',tag:'STAFF'},{ico:'🎓',name:'Security Champ',desc:'Trains others monthly',tag:'STAFF'}]},
- {q:()=>'Which app has the exploitable flaw?',bad:()=>R([{ico:'📝',name:'Legacy Portal',desc:"Login: user=' OR '1'='1 works",tag:'APP',clue:'That input bypasses authentication — a live SQL injection.',act:'Fix: use parameterized queries, add input validation and a WAF, and code-review the auth path.'},{ico:'💬',name:'Old Forum',desc:'Comment field runs <script> tags',tag:'APP',clue:'Unfiltered script in a field is stored XSS that hijacks other users\' sessions.',act:'Fix: output-encode user content, add a Content-Security-Policy, and sanitize inputs.'},{ico:'📤',name:'Upload Tool',desc:'Accepts .php files, no checks',tag:'APP',clue:'Unrestricted upload of executable files leads to a web shell / RCE.',act:'Fix: allowlist file types, store uploads outside the web root, and never execute uploaded files.'}]),decoys:[{ico:'🛒',name:'Shop API',desc:'Input validated, params bound',tag:'APP'},{ico:'📱',name:'Mobile App',desc:'Cert pinning, obfuscated',tag:'APP'},{ico:'📊',name:'Dashboard',desc:'SSO, CSP headers set',tag:'APP'},{ico:'🧾',name:'Billing App',desc:'Parametrized queries, WAF',tag:'APP'}]},
- {q:()=>'Where is the data-exfil path?',bad:()=>R([{ico:'☁️',name:'Guest WiFi',desc:'Bridged to corp LAN, no isolation',tag:'NET',clue:'Guest WiFi bridged to the corporate LAN is a wide-open side door.',act:'Fix: isolate guest WiFi to its own VLAN/internet-only, with no route into corporate.'},{ico:'🔌',name:'Open USB',desc:'No device control, mass-storage allowed',tag:'HOST',clue:'Uncontrolled USB ports let data walk straight out.',act:'Fix: deploy device control/DLP, block mass storage by policy, and log USB usage.'}]),decoys:[{ico:'🧱',name:'Egress FW',desc:'Default-deny outbound',tag:'CTRL'},{ico:'🔍',name:'DLP',desc:'Scans uploads, blocks archives',tag:'CTRL'},{ico:'📡',name:'Proxy',desc:'All traffic logged & filtered',tag:'CTRL'},{ico:'🚧',name:'Segmentation',desc:'VLANs isolated, least access',tag:'NET'}]},
- {q:()=>'First target for privilege escalation?',bad:()=>R([{ico:'📁',name:'Public Share',desc:'\\\\srv\\backup — passwords.xlsx readable by all',tag:'SMB',clue:'A world-readable share with a passwords file hands over the keys.',act:'Fix: lock down share permissions (least privilege), remove the credentials file, and rotate any exposed passwords.'},{ico:'📜',name:'Script Folder',desc:'logon.bat contains a plaintext admin password',tag:'SMB',clue:'Hardcoded admin passwords in scripts are a gift to attackers.',act:'Fix: remove secrets from scripts, use a secrets vault / gMSA, and rotate the exposed password.'},{ico:'⏰',name:'Scheduled Task',desc:'Runs as SYSTEM, editable by any user',tag:'HOST',clue:'A SYSTEM task any user can edit is trivial privilege escalation.',act:'Fix: correct the task/file permissions so only admins can modify it, and audit for similar misconfigs.'}]),decoys:[{ico:'🖥️',name:'Workstation',desc:'EDR on, least-privilege user',tag:'HOST'},{ico:'🗝️',name:'Vault',desc:'Secrets sealed, audited',tag:'PAM'},{ico:'🧩',name:'GPO',desc:'Hardened, signed policies',tag:'AD'},{ico:'🔐',name:'LAPS',desc:'Randomized local admin passwords',tag:'AD'}]},
- {q:()=>'Which device is the rogue entry point?',bad:()=>R([{ico:'🖨️',name:'Printer',desc:'Default SNMP "public", telnet open',tag:'IOT',clue:'Forgotten printers with default SNMP/telnet are a classic pivot point.',act:'Fix: change SNMP community strings, disable telnet, patch firmware, and put printers on an isolated VLAN.'},{ico:'📹',name:'Old IP Cam',desc:'Default password, firmware from 2015',tag:'IOT',clue:'Cheap cameras with default creds are botnet and pivot favorites.',act:'Fix: change defaults, update firmware, and segment IoT away from corporate.'},{ico:'🔊',name:'Smart TV',desc:'On the corp VLAN, never updated',tag:'IOT',clue:'An unpatched smart device on the corp VLAN is an easy beachhead.',act:'Fix: move IoT/AV gear to a dedicated VLAN with no corporate access, and keep it updated.'}]),decoys:[{ico:'📷',name:'IP Camera',desc:'Firmware current, VLAN isolated',tag:'IOT'},{ico:'🌡️',name:'HVAC',desc:'Air-gapped controller',tag:'OT'},{ico:'⌚',name:'Badge Reader',desc:'Encrypted, monitored',tag:'PHYS'},{ico:'📶',name:'Access Point',desc:'WPA3, cert auth, isolated mgmt',tag:'NET'}]},
- {q:()=>'Spot the phishing-ready weakness.',bad:()=>({ico:'📨',name:'Email Gateway',desc:'No '+R(['SPF','DKIM','DMARC'])+' — domain is spoofable',tag:'MAIL',clue:'Missing SPF/DKIM/DMARC lets attackers spoof your own domain to your staff.',act:'Fix: publish SPF, DKIM and DMARC (move to p=reject), and monitor DMARC reports.'}),decoys:[{ico:'🔐',name:'MFA',desc:'Enforced org-wide',tag:'IAM'},{ico:'🎓',name:'Training',desc:'Monthly, 96% pass rate',tag:'PEOPLE'},{ico:'🧯',name:'Sandbox',desc:'Detonates every attachment',tag:'MAIL'},{ico:'🚫',name:'Link Rewrite',desc:'All URLs scanned at click-time',tag:'MAIL'}]},
- {q:()=>'Which server is the soft target?',bad:()=>({ico:'🪟',name:R(['WIN-2008','WIN-2003','SRV-LEGACY']),desc:'End-of-life OS, SMBv1 enabled, unpatched',tag:'SRV',clue:'An EOL Windows box with SMBv1 is EternalBlue territory — wormable.',act:'Fix: decommission or isolate it, migrate the workload to a supported OS, and disable SMBv1.'}),decoys:[{ico:'🐧',name:'LINUX-05',desc:'Auto-patched, SELinux enforcing',tag:'SRV'},{ico:'📦',name:'K8S-NODE',desc:'Hardened, network policies on',tag:'SRV'},{ico:'🧮',name:'APP-07',desc:'Patched, monitored',tag:'SRV'},{ico:'🗄️',name:'DB-02',desc:'Latest patches, TDE encryption',tag:'SRV'}]},
- {q:()=>'Best lateral-movement opportunity?',bad:()=>R([{ico:'🔁',name:'Shared local admin',desc:'Same local admin password on all PCs',tag:'AD',clue:'One reused local-admin password enables pass-the-hash across the whole fleet.',act:'Fix: deploy LAPS so every machine has a unique local admin password; block lateral admin logons.'},{ico:'🎫',name:'Kerberoastable svc',desc:'Service account, weak password, SPN set',tag:'AD',clue:'A weak service-account password with an SPN yields a crackable Kerberos ticket.',act:'Fix: use long random passwords or gMSA for service accounts, and monitor for Kerberoasting.'}]),decoys:[{ico:'🚧',name:'Segmentation',desc:'Micro-segmented, least access',tag:'NET'},{ico:'👁️',name:'EDR',desc:'Behavioral detection fleet-wide',tag:'HOST'},{ico:'🔐',name:'LAPS',desc:'Unique local admin per host',tag:'AD'},{ico:'🎟️',name:'Kerberos',desc:'AES only, strong svc passwords',tag:'AD'}]},
+ {q:()=>'Which host does a pentester attack first?',bad:()=>({ico:'📠',name:R(['OLD-FTP','LEGACY-FTP','ARCHIVE-01']),desc:'Public FTP, anonymous login ON, '+RN(2007,2011)+' build',tag:'DMZ',clue:'Anonymous FTP on a 15-year-old server is an instant, no-password foothold.',act:'Fix: disable anonymous FTP, retire the legacy box or move it off the internet, and patch or replace the OS.'}),decoys:[{ico:'🖥️',name:'WEB-01',desc:'Patched, WAF in front, HTTPS only',tag:'DMZ'},{ico:'🗄️',name:'DB-PROD',desc:'Internal only, no public route',tag:'INTERNAL'},{ico:'🔒',name:'VPN-GW',desc:'MFA enforced, fully updated',tag:'EDGE'},{ico:'📧',name:'MAIL-01',desc:'Hardened, TLS, patched monthly',tag:'DMZ'},{ico:'🧮',name:'APP-07',desc:'Patched, behind reverse proxy',tag:'INTERNAL'}]},
+ {q:()=>'Weakest credential to exploit?',bad:()=>({ico:'👤',name:R(['admin / admin','root / toor','admin / password']),desc:'Default creds on the '+R(['router','switch','printer'])+' admin panel',tag:'DEFAULT',clue:'Default credentials are the first thing attackers try, and they work far too often.',act:'Fix: change all default passwords, enforce a strong password policy plus MFA, and audit devices for factory defaults.'}),decoys:[{ico:'👤',name:'j.smith',desc:'22-char passphrase + hardware key',tag:'USER'},{ico:'👤',name:'svc_sql',desc:'Rotated weekly, vaulted',tag:'SERVICE'},{ico:'👤',name:'ceo',desc:'MFA + passkey only',tag:'EXEC'},{ico:'👤',name:'backup_op',desc:'Random 32-char, in PAM',tag:'SERVICE'},{ico:'👤',name:'admin_ad',desc:'Smartcard-only login',tag:'ADMIN'}]},
+ {q:()=>'Which service exposes the network?',bad:()=>R([{ico:'🖧',name:'RDP 3389',desc:'Open to the internet, no MFA',tag:'PORT',clue:'Internet-facing RDP with no MFA is the number one ransomware entry point.',act:'Fix: put RDP behind a VPN, require MFA, restrict source IPs, and enable account lockout.'},{ico:'🗂️',name:'SMB 445',desc:'Exposed to the internet, SMBv1 on',tag:'PORT',clue:'SMBv1 on the open internet invites EternalBlue-style wormable ransomware.',act:'Fix: block 445 at the edge, disable SMBv1 everywhere, and patch.'},{ico:'🐚',name:'Telnet 23',desc:'Open, plaintext, no encryption',tag:'PORT',clue:'Telnet sends credentials in clear text and should never be exposed.',act:'Fix: disable Telnet, use SSH with keys, and firewall the port.'}]),decoys:[{ico:'🌐',name:'HTTPS 443',desc:'TLS 1.3, cert valid',tag:'PORT'},{ico:'📧',name:'SMTP 25',desc:'Relay locked, SPF/DKIM set',tag:'PORT'},{ico:'🔑',name:'SSH 22',desc:'Key-only, root login disabled',tag:'PORT'},{ico:'🔐',name:'IMAPS 993',desc:'TLS only, MFA on mailboxes',tag:'PORT'}]},
+ {q:()=>'Pick the social-engineering target.',bad:()=>R([{ico:'📞',name:R(['New Intern','Temp Hire','Day-3 Joiner']),desc:'Eager to help, no security training yet',tag:'STAFF',clue:'Untrained and eager to please makes them the easiest person to manipulate.',act:'Fix: security onboarding from day one, a clear "verify before you act" culture, and an easy way to report.'},{ico:'📞',name:'Reception',desc:'Answers every call, holds every door',tag:'STAFF',clue:'The front desk is friendly by design, which is perfect for pretexting and tailgating.',act:'Fix: visitor verification procedures, anti-tailgating training, and a script for unusual requests.'}]),decoys:[{ico:'🛡️',name:'SOC Analyst',desc:'Phishing-aware, reports tests',tag:'STAFF'},{ico:'💼',name:'CISO',desc:'Runs the awareness programme',tag:'STAFF'},{ico:'⚙️',name:'Sysadmin',desc:'Verifies every request by phone',tag:'STAFF'},{ico:'🎓',name:'Security Champ',desc:'Trains others monthly',tag:'STAFF'}]},
+ {q:()=>'Which app has the exploitable flaw?',bad:()=>R([{ico:'📝',name:'Legacy Portal',desc:"Login: user=' OR '1'='1 works",tag:'APP',clue:'That input bypasses authentication — a live SQL injection.',act:'Fix: use parameterised queries, add input validation and a WAF, and code-review the auth path.'},{ico:'💬',name:'Old Forum',desc:'Comment field runs script tags',tag:'APP',clue:'Unfiltered script in a field is stored XSS that hijacks other users\' sessions.',act:'Fix: output-encode user content, add a Content-Security-Policy, and sanitise inputs.'},{ico:'📤',name:'Upload Tool',desc:'Accepts .php files, no checks',tag:'APP',clue:'Unrestricted upload of executable files leads to a web shell and remote code execution.',act:'Fix: allowlist file types, store uploads outside the web root, and never execute uploaded files.'}]),decoys:[{ico:'🛒',name:'Shop API',desc:'Input validated, params bound',tag:'APP'},{ico:'📱',name:'Mobile App',desc:'Cert pinning, obfuscated',tag:'APP'},{ico:'📊',name:'Dashboard',desc:'SSO, CSP headers set',tag:'APP'},{ico:'🧾',name:'Billing App',desc:'Parameterised queries, WAF',tag:'APP'}]},
+ {q:()=>'Where is the data-exfil path?',bad:()=>R([{ico:'☁️',name:'Guest WiFi',desc:'Bridged to corp LAN, no isolation',tag:'NET',clue:'Guest WiFi bridged to the corporate LAN is a wide-open side door.',act:'Fix: isolate guest WiFi to its own VLAN with internet-only access and no route into corporate.'},{ico:'🔌',name:'Open USB',desc:'No device control, mass-storage allowed',tag:'HOST',clue:'Uncontrolled USB ports let data walk straight out of the building.',act:'Fix: deploy device control and DLP, block mass storage by policy, and log USB usage.'}]),decoys:[{ico:'🧱',name:'Egress FW',desc:'Default-deny outbound',tag:'CTRL'},{ico:'🔍',name:'DLP',desc:'Scans uploads, blocks archives',tag:'CTRL'},{ico:'📡',name:'Proxy',desc:'All traffic logged & filtered',tag:'CTRL'},{ico:'🚧',name:'Segmentation',desc:'VLANs isolated, least access',tag:'NET'}]},
+ {q:()=>'First target for privilege escalation?',bad:()=>R([{ico:'📁',name:'Public Share',desc:'\\\\srv\\backup — passwords.xlsx readable by all',tag:'SMB',clue:'A world-readable share containing a passwords file hands over the keys.',act:'Fix: lock down share permissions to least privilege, remove the credentials file, and rotate any exposed passwords.'},{ico:'📜',name:'Script Folder',desc:'logon.bat contains a plaintext admin password',tag:'SMB',clue:'Hardcoded admin passwords in scripts are a gift to attackers.',act:'Fix: remove secrets from scripts, use a secrets vault or gMSA, and rotate the exposed password.'},{ico:'⏰',name:'Scheduled Task',desc:'Runs as SYSTEM, editable by any user',tag:'HOST',clue:'A SYSTEM task any user can edit is trivial privilege escalation.',act:'Fix: correct the task and file permissions so only admins can modify it, and audit for similar misconfigurations.'}]),decoys:[{ico:'🖥️',name:'Workstation',desc:'EDR on, least-privilege user',tag:'HOST'},{ico:'🗝️',name:'Vault',desc:'Secrets sealed, audited',tag:'PAM'},{ico:'🧩',name:'GPO',desc:'Hardened, signed policies',tag:'AD'},{ico:'🔐',name:'LAPS',desc:'Randomised local admin passwords',tag:'AD'}]},
+ {q:()=>'Which device is the rogue entry point?',bad:()=>R([{ico:'🖨️',name:'Printer',desc:'Default SNMP "public", telnet open',tag:'IOT',clue:'Forgotten printers with default SNMP and telnet are a classic pivot point.',act:'Fix: change SNMP community strings, disable telnet, patch firmware, and put printers on an isolated VLAN.'},{ico:'📹',name:'Old IP Cam',desc:'Default password, firmware from 2015',tag:'IOT',clue:'Cheap cameras with default credentials are botnet and pivot favourites.',act:'Fix: change defaults, update firmware, and segment IoT away from corporate.'},{ico:'🔊',name:'Smart TV',desc:'On the corp VLAN, never updated',tag:'IOT',clue:'An unpatched smart device on the corporate VLAN is an easy beachhead.',act:'Fix: move IoT and AV gear to a dedicated VLAN with no corporate access, and keep it updated.'}]),decoys:[{ico:'📷',name:'IP Camera',desc:'Firmware current, VLAN isolated',tag:'IOT'},{ico:'🌡️',name:'HVAC',desc:'Air-gapped controller',tag:'OT'},{ico:'⌚',name:'Badge Reader',desc:'Encrypted, monitored',tag:'PHYS'},{ico:'📶',name:'Access Point',desc:'WPA3, cert auth, isolated mgmt',tag:'NET'}]},
+ {q:()=>'Spot the phishing-ready weakness.',bad:()=>({ico:'📨',name:'Email Gateway',desc:'No '+R(['SPF','DKIM','DMARC'])+' — domain is spoofable',tag:'MAIL',clue:'Missing SPF, DKIM and DMARC lets attackers spoof your own domain to your own staff.',act:'Fix: publish SPF, DKIM and DMARC (move to p=reject), and monitor the DMARC reports.'}),decoys:[{ico:'🔐',name:'MFA',desc:'Enforced org-wide',tag:'IAM'},{ico:'🎓',name:'Training',desc:'Monthly, 96% pass rate',tag:'PEOPLE'},{ico:'🧯',name:'Sandbox',desc:'Detonates every attachment',tag:'MAIL'},{ico:'🚫',name:'Link Rewrite',desc:'All URLs scanned at click-time',tag:'MAIL'}]},
+ {q:()=>'Which server is the soft target?',bad:()=>({ico:'🪟',name:R(['WIN-2008','WIN-2003','SRV-LEGACY']),desc:'End-of-life OS, SMBv1 enabled, unpatched',tag:'SRV',clue:'An end-of-life Windows box with SMBv1 is EternalBlue territory and wormable.',act:'Fix: decommission or isolate it, migrate the workload to a supported OS, and disable SMBv1.'}),decoys:[{ico:'🐧',name:'LINUX-05',desc:'Auto-patched, SELinux enforcing',tag:'SRV'},{ico:'📦',name:'K8S-NODE',desc:'Hardened, network policies on',tag:'SRV'},{ico:'🧮',name:'APP-07',desc:'Patched, monitored',tag:'SRV'},{ico:'🗄️',name:'DB-02',desc:'Latest patches, TDE encryption',tag:'SRV'}]},
+ {q:()=>'Best lateral-movement opportunity?',bad:()=>R([{ico:'🔁',name:'Shared local admin',desc:'Same local admin password on all PCs',tag:'AD',clue:'One reused local-admin password enables pass-the-hash across the whole fleet.',act:'Fix: deploy LAPS so every machine has a unique local admin password, and block lateral admin logons.'},{ico:'🎫',name:'Kerberoastable svc',desc:'Service account, weak password, SPN set',tag:'AD',clue:'A weak service-account password with an SPN yields a crackable Kerberos ticket.',act:'Fix: use long random passwords or gMSA for service accounts, and monitor for Kerberoasting.'}]),decoys:[{ico:'🚧',name:'Segmentation',desc:'Micro-segmented, least access',tag:'NET'},{ico:'👁️',name:'EDR',desc:'Behavioural detection fleet-wide',tag:'HOST'},{ico:'🔐',name:'LAPS',desc:'Unique local admin per host',tag:'AD'},{ico:'🎟️',name:'Kerberos',desc:'AES only, strong svc passwords',tag:'AD'}]},
  {q:()=>'Which cloud misconfig do you hit?',bad:()=>R([{ico:'🪣',name:'S3 Bucket',desc:'Public read, lists all objects',tag:'CLOUD',clue:'A public bucket leaks data with zero exploitation needed.',act:'Fix: block public access, apply least-privilege bucket policies, and enable access logging.'},{ico:'🗝️',name:'Leaked Key',desc:'AWS key hardcoded in a public repo',tag:'CLOUD',clue:'A committed access key lets an attacker log straight into your cloud.',act:'Fix: revoke the key immediately, rotate credentials, scan history, and add secret-scanning to CI.'},{ico:'🌍',name:'Open DB',desc:'MongoDB exposed, no auth',tag:'CLOUD',clue:'A no-auth internet-facing database is a smash-and-grab.',act:'Fix: require auth, restrict the security group to known IPs, and never expose databases publicly.'}]),decoys:[{ico:'🔑',name:'IAM Roles',desc:'Least-privilege, no wildcards',tag:'CLOUD'},{ico:'🛡️',name:'Security Grp',desc:'Ports locked to office IPs',tag:'CLOUD'},{ico:'📜',name:'CloudTrail',desc:'Logging on, alerts wired',tag:'CLOUD'},{ico:'🔒',name:'KMS',desc:'Encrypted at rest, rotated keys',tag:'CLOUD'}]},
- {q:()=>'Where does the attacker get initial access?',bad:()=>R([{ico:'🎣',name:'Macro Doc',desc:'"Invoice.docm" — enable-content macro',tag:'EMAIL',clue:'Macro-enabled Office docs are a classic malware delivery vector.',act:'Fix: block macros from the internet by policy, sandbox attachments, and train staff not to enable content.'},{ico:'🔗',name:'Fake Login',desc:'Cloned O365 page, harvests passwords',tag:'PHISH',clue:'A convincing fake login page is how most breaches actually start.',act:'Fix: roll out phishing-resistant MFA (FIDO2), user reporting, and URL/click protection.'}]),decoys:[{ico:'🧯',name:'Attach Sandbox',desc:'Detonates files pre-delivery',tag:'MAIL'},{ico:'🔐',name:'FIDO2 Keys',desc:'Phishing-resistant MFA',tag:'IAM'},{ico:'👁️',name:'EDR',desc:'Blocks macro child processes',tag:'HOST'},{ico:'🚫',name:'App Allowlist',desc:'Only signed apps run',tag:'HOST'}]},
- {q:()=>'Which patch gap gets exploited?',bad:()=>R([{ico:'🩹',name:R(['VPN Appliance','Firewall','Gateway']),desc:'Public CVE, exploit released, unpatched 8 months',tag:'EDGE',clue:'A known-exploited CVE on an edge device is attackers\' priority #1.',act:'Fix: patch it now (emergency change), check for prior compromise, and set an SLA for edge patching.'},{ico:'🌐',name:'Web Server',desc:'Runs a framework version with a public RCE',tag:'DMZ',clue:'An internet-facing app with a public RCE is low-hanging fruit.',act:'Fix: upgrade the framework, add a virtual patch/WAF rule meanwhile, and scan for webshells.'}]),decoys:[{ico:'🖥️',name:'Fleet',desc:'Auto-patched within 48h',tag:'HOST'},{ico:'🗄️',name:'DB Cluster',desc:'Current patches, isolated',tag:'INTERNAL'},{ico:'📦',name:'Containers',desc:'Rebuilt nightly from clean images',tag:'CLOUD'},{ico:'🔒',name:'VPN-GW',desc:'Latest firmware, monitored',tag:'EDGE'}]},
- {q:()=>'Physical: which door do you walk through?',bad:()=>R([{ico:'🚬',name:'Smoking Door',desc:'Propped open, no camera, no badge',tag:'PHYS',clue:'A propped side door is the easiest breach of all — no hacking required.',act:'Fix: alarm/auto-close the door, add a camera, and build a no-propping, challenge-strangers culture.'},{ico:'📦',name:'Loading Bay',desc:'Deliveries let in without checks',tag:'PHYS',clue:'Delivery entrances are notoriously easy to tailgate through.',act:'Fix: verify deliveries, add access control and CCTV at the bay, and escort visitors.'}]),decoys:[{ico:'🚪',name:'Main Lobby',desc:'Guard + badge + visitor log',tag:'PHYS'},{ico:'🔐',name:'Server Room',desc:'Biometric, mantrap, logged',tag:'PHYS'},{ico:'🅿️',name:'Garage',desc:'Badge gate, ANPR cameras',tag:'PHYS'},{ico:'🪟',name:'Windows',desc:'Sealed, alarmed, 4th floor',tag:'PHYS'}]},
- {q:()=>'Which Active Directory weakness do you abuse?',bad:()=>R([{ico:'🎟️',name:'AS-REP Roast',desc:'User has "no pre-auth" set',tag:'AD',clue:'No-preauth accounts hand you a crackable hash without any credentials.',act:'Fix: remove "do not require Kerberos pre-auth", enforce strong passwords, and alert on AS-REP requests.'},{ico:'👑',name:'Unconstrained Deleg',desc:'Server trusted for full delegation',tag:'AD',clue:'Unconstrained delegation lets an attacker capture domain-admin tickets.',act:'Fix: remove unconstrained delegation, use constrained/RBCD, and mark admins as "sensitive, cannot be delegated".'}]),decoys:[{ico:'🔐',name:'Tiered Admin',desc:'Tier-0 accounts isolated',tag:'AD'},{ico:'🎫',name:'Kerberos',desc:'AES, no legacy ciphers',tag:'AD'},{ico:'👁️',name:'AD Auditing',desc:'Sensitive events alerted',tag:'AD'},{ico:'🧩',name:'GPO',desc:'Signed, least-privilege',tag:'AD'}]}];
-function breachPool(){return ARCH.length*3*20;}
-const archUsed=[];
-function nextScenario(){let idx;for(let i=0;i<20;i++){idx=RN(0,ARCH.length-1);if(!archUsed.includes(idx))break;}
- archUsed.push(idx);if(archUsed.length>ARCH.length-2)archUsed.shift();
- const a=ARCH[idx],bad=Object.assign({bad:true},a.bad()),decoys=pick3(a.decoys).map(d=>Object.assign({bad:false},d));
- const nodes=[bad,...decoys];for(let i=nodes.length-1;i>0;i--){const j=RN(0,i);[nodes[i],nodes[j]]=[nodes[j],nodes[i]];}
- return{q:a.q(),nodes,bad};}
+ {q:()=>'Where does the attacker get initial access?',bad:()=>R([{ico:'🎣',name:'Macro Doc',desc:'"Invoice.docm" — enable-content macro',tag:'EMAIL',clue:'Macro-enabled Office documents are a classic malware delivery vector.',act:'Fix: block macros from the internet by policy, sandbox attachments, and train staff not to enable content.'},{ico:'🔗',name:'Fake Login',desc:'Cloned O365 page, harvests passwords',tag:'PHISH',clue:'A convincing fake login page is how most breaches actually start.',act:'Fix: roll out phishing-resistant MFA (FIDO2), user reporting, and click-time URL protection.'}]),decoys:[{ico:'🧯',name:'Attach Sandbox',desc:'Detonates files pre-delivery',tag:'MAIL'},{ico:'🔐',name:'FIDO2 Keys',desc:'Phishing-resistant MFA',tag:'IAM'},{ico:'👁️',name:'EDR',desc:'Blocks macro child processes',tag:'HOST'},{ico:'🚫',name:'App Allowlist',desc:'Only signed apps run',tag:'HOST'}]},
+ {q:()=>'Which patch gap gets exploited?',bad:()=>R([{ico:'🩹',name:R(['VPN Appliance','Firewall','Gateway']),desc:'Public CVE, exploit released, unpatched 8 months',tag:'EDGE',clue:'A known-exploited CVE on an edge device is the attackers\' priority number one.',act:'Fix: patch it now as an emergency change, check for prior compromise, and set an SLA for edge patching.'},{ico:'🌐',name:'Web Server',desc:'Runs a framework version with a public RCE',tag:'DMZ',clue:'An internet-facing app with a public remote-code-execution bug is low-hanging fruit.',act:'Fix: upgrade the framework, add a virtual patch or WAF rule meanwhile, and scan for web shells.'}]),decoys:[{ico:'🖥️',name:'Fleet',desc:'Auto-patched within 48h',tag:'HOST'},{ico:'🗄️',name:'DB Cluster',desc:'Current patches, isolated',tag:'INTERNAL'},{ico:'📦',name:'Containers',desc:'Rebuilt nightly from clean images',tag:'CLOUD'},{ico:'🔒',name:'VPN-GW',desc:'Latest firmware, monitored',tag:'EDGE'}]},
+ {q:()=>'Physical: which door do you walk through?',bad:()=>R([{ico:'🚬',name:'Smoking Door',desc:'Propped open, no camera, no badge',tag:'PHYS',clue:'A propped side door is the easiest breach of all — no hacking required.',act:'Fix: alarm and auto-close the door, add a camera, and build a no-propping, challenge-strangers culture.'},{ico:'📦',name:'Loading Bay',desc:'Deliveries let in without checks',tag:'PHYS',clue:'Delivery entrances are notoriously easy to tailgate through.',act:'Fix: verify deliveries, add access control and CCTV at the bay, and escort visitors.'}]),decoys:[{ico:'🚪',name:'Main Lobby',desc:'Guard + badge + visitor log',tag:'PHYS'},{ico:'🔐',name:'Server Room',desc:'Biometric, mantrap, logged',tag:'PHYS'},{ico:'🅿️',name:'Garage',desc:'Badge gate, ANPR cameras',tag:'PHYS'},{ico:'🪟',name:'Windows',desc:'Sealed, alarmed, 4th floor',tag:'PHYS'}]},
+ {q:()=>'Which Active Directory weakness do you abuse?',bad:()=>R([{ico:'🎟️',name:'AS-REP Roast',desc:'User has "no pre-auth" set',tag:'AD',clue:'No-preauth accounts hand you a crackable hash without any credentials at all.',act:'Fix: remove "do not require Kerberos pre-auth", enforce strong passwords, and alert on AS-REP requests.'},{ico:'👑',name:'Unconstrained Deleg',desc:'Server trusted for full delegation',tag:'AD',clue:'Unconstrained delegation lets an attacker capture domain-admin tickets.',act:'Fix: remove unconstrained delegation, use constrained or RBCD, and mark admins as "sensitive, cannot be delegated".'}]),decoys:[{ico:'🔐',name:'Tiered Admin',desc:'Tier-0 accounts isolated',tag:'AD'},{ico:'🎫',name:'Kerberos',desc:'AES, no legacy ciphers',tag:'AD'},{ico:'👁️',name:'AD Auditing',desc:'Sensitive events alerted',tag:'AD'},{ico:'🧩',name:'GPO',desc:'Signed, least-privilege',tag:'AD'}]},
+ {q:()=>'Which backup weakness kills your recovery?',bad:()=>R([{ico:'💾',name:'Backup Server',desc:'On the domain, admin creds reused',tag:'BACKUP',clue:'A domain-joined backup server with reused admin credentials gets encrypted along with everything else.',act:'Fix: keep backups off-domain, use immutable or air-gapped copies, and separate backup credentials entirely.'},{ico:'🗃️',name:'NAS Share',desc:'Backups on a writable SMB share',tag:'BACKUP',clue:'If ransomware can write to your backups, you have no backups.',act:'Fix: move to immutable storage, restrict write access, and keep one offline copy. Test restores regularly.'}]),decoys:[{ico:'🔒',name:'Immutable Vault',desc:'WORM storage, 30-day lock',tag:'BACKUP'},{ico:'📼',name:'Tape Offsite',desc:'Air-gapped, weekly rotation',tag:'BACKUP'},{ico:'☁️',name:'Cloud Backup',desc:'Separate tenant, MFA-delete',tag:'BACKUP'},{ico:'🧪',name:'Restore Tests',desc:'Verified monthly, documented',tag:'BACKUP'}]},
+ {q:()=>'Which supply-chain link do you compromise?',bad:()=>R([{ico:'🔧',name:'MSP Access',desc:'Vendor has permanent domain admin, no MFA',tag:'3RD-PARTY',clue:'Standing domain-admin access for an outside party makes their breach your breach.',act:'Fix: just-in-time access, MFA for all vendors, least privilege, and full session logging.'},{ico:'📦',name:'Build Pipeline',desc:'CI pulls unpinned public packages',tag:'DEVOPS',clue:'Unpinned dependencies let an attacker slip malicious code into your own product.',act:'Fix: pin and hash-verify dependencies, use a private registry mirror, and scan the software bill of materials.'}]),decoys:[{ico:'📝',name:'Vendor Reviews',desc:'Annual security assessments',tag:'3RD-PARTY'},{ico:'🔑',name:'JIT Access',desc:'Time-boxed, approved per task',tag:'3RD-PARTY'},{ico:'🔏',name:'Signed Artifacts',desc:'Provenance verified in CI',tag:'DEVOPS'},{ico:'🧾',name:'SBOM',desc:'Generated and scanned each build',tag:'DEVOPS'}]},
+ {q:()=>'Which wireless weakness do you exploit?',bad:()=>R([{ico:'📶',name:'Legacy WPA2-PSK',desc:'Shared key, never rotated, on staff laptops',tag:'WIFI',clue:'A shared pre-shared key that never changes leaks with every departing employee.',act:'Fix: move to WPA3-Enterprise with certificate authentication, or rotate the PSK and segment the network.'},{ico:'📡',name:'Rogue AP',desc:'Unmanaged AP under a desk, open SSID',tag:'WIFI',clue:'An unmanaged access point bypasses every perimeter control you own.',act:'Fix: run wireless intrusion detection, scan for rogue APs regularly, and enforce a no-personal-AP policy.'}]),decoys:[{ico:'🔐',name:'WPA3-Ent',desc:'Cert auth, per-user keys',tag:'WIFI'},{ico:'🕵️',name:'WIDS',desc:'Rogue AP detection active',tag:'WIFI'},{ico:'🧱',name:'Guest VLAN',desc:'Internet-only, fully isolated',tag:'WIFI'},{ico:'📋',name:'NAC',desc:'802.1X, posture checks',tag:'NET'}]},
+ {q:()=>'Which API flaw gets you the data?',bad:()=>R([{ico:'🔢',name:'IDOR Endpoint',desc:'/api/user/1042 returns any user\'s record',tag:'API',clue:'Changing the ID in the URL returns other people\'s data — broken object-level authorisation.',act:'Fix: enforce per-object authorisation server-side on every request, and test with a second user account.'},{ico:'🚪',name:'Debug Route',desc:'/api/debug exposed in production',tag:'API',clue:'Debug endpoints leak internals, tokens and sometimes full database dumps.',act:'Fix: strip debug routes from production builds and add a deployment gate that fails if they exist.'},{ico:'♾️',name:'No Rate Limit',desc:'OTP endpoint accepts unlimited tries',tag:'API',clue:'Unlimited attempts means a 6-digit code can be brute-forced in minutes.',act:'Fix: rate-limit and lock out per account and per IP, and expire codes quickly.'}]),decoys:[{ico:'🔐',name:'Auth Middleware',desc:'Scope checked per request',tag:'API'},{ico:'⏱️',name:'Rate Limiting',desc:'Per-key throttling enabled',tag:'API'},{ico:'📜',name:'Schema Validation',desc:'Strict types, rejects extra fields',tag:'API'},{ico:'🔏',name:'Signed Tokens',desc:'Short-lived JWT, rotated keys',tag:'API'}]},
+ {q:()=>'Which secret gets you the crown jewels?',bad:()=>R([{ico:'📓',name:'Wiki Page',desc:'"Prod credentials" page, readable org-wide',tag:'SECRET',clue:'Production credentials in a searchable wiki are one search away for anyone inside.',act:'Fix: move secrets to a vault, delete the page and its history, and rotate every credential it held.'},{ico:'🧾',name:'Git History',desc:'.env with live API keys committed 2 years ago',tag:'SECRET',clue:'Deleting a file does not remove it from git history — the key is still there.',act:'Fix: rotate the keys immediately, purge history, and enable secret scanning with pre-commit hooks.'},{ico:'💬',name:'Chat Channel',desc:'Admin password pasted in a Teams thread',tag:'SECRET',clue:'Chat history is searchable, exportable and rarely access-controlled.',act:'Fix: rotate the password, delete the message, and give staff a proper secret-sharing tool.'}]),decoys:[{ico:'🗝️',name:'HashiCorp Vault',desc:'Dynamic secrets, short TTL',tag:'SECRET'},{ico:'🔐',name:'Key Vault',desc:'Managed identity access only',tag:'CLOUD'},{ico:'🤖',name:'gMSA',desc:'Auto-rotated service accounts',tag:'AD'},{ico:'🔍',name:'Secret Scanning',desc:'Blocks commits with keys',tag:'DEVOPS'}]},
+ {q:()=>'Which container weakness do you ride?',bad:()=>R([{ico:'📦',name:'Privileged Pod',desc:'Runs as root with hostPath mounted',tag:'K8S',clue:'A privileged container with a host mount is a direct escape to the underlying node.',act:'Fix: enforce Pod Security Standards, drop privileged mode and root, and remove hostPath mounts.'},{ico:'🎭',name:'Default SA Token',desc:'Service account can read all secrets',tag:'K8S',clue:'An over-permissioned service account turns one pod into cluster-wide access.',act:'Fix: apply least-privilege RBAC, disable auto-mounting of default tokens, and audit role bindings.'},{ico:'🖼️',name:'Stale Image',desc:'Base image 3 years old, 40 critical CVEs',tag:'K8S',clue:'An ancient base image ships known exploits straight into production.',act:'Fix: rebuild from current bases, scan images in CI, and fail builds on critical vulnerabilities.'}]),decoys:[{ico:'🛡️',name:'Pod Security',desc:'Restricted profile enforced',tag:'K8S'},{ico:'🔒',name:'Network Policy',desc:'Default-deny between namespaces',tag:'K8S'},{ico:'🔏',name:'Image Signing',desc:'Cosign verified at admission',tag:'K8S'},{ico:'👁️',name:'Runtime Sensor',desc:'Falco rules, alerts wired',tag:'K8S'}]},
+ {q:()=>'Which mobile/BYOD gap do you use?',bad:()=>R([{ico:'📱',name:'Jailbroken Phone',desc:'Personal device with full mail sync, no MDM',tag:'BYOD',clue:'A compromised personal device with corporate mail bypasses every endpoint control.',act:'Fix: require MDM enrolment with jailbreak detection for corporate data, or use containerised access only.'},{ico:'📲',name:'Sideloaded App',desc:'Staff installed an unofficial VPN app',tag:'BYOD',clue:'Sideloaded apps often carry spyware that reads everything on the device.',act:'Fix: restrict installs to managed stores, add mobile threat defence, and educate staff.'}]),decoys:[{ico:'🔐',name:'MDM Enrolled',desc:'Compliance policy enforced',tag:'BYOD'},{ico:'📦',name:'Work Profile',desc:'Corporate data containerised',tag:'BYOD'},{ico:'🧹',name:'Remote Wipe',desc:'Tested, works in minutes',tag:'BYOD'},{ico:'🛡️',name:'MTD',desc:'Mobile threat defence active',tag:'BYOD'}]},
+ {q:()=>'Which logging blind spot helps you hide?',bad:()=>R([{ico:'🕳️',name:'No PowerShell Logs',desc:'Script-block logging disabled fleet-wide',tag:'LOGGING',clue:'Without script-block logging, attacker PowerShell is effectively invisible.',act:'Fix: enable script-block and module logging via GPO, and forward the logs to the SIEM.'},{ico:'📉',name:'30-Day Retention',desc:'Logs rotate out after a month',tag:'LOGGING',clue:'Dwell time often exceeds a month, so the evidence is gone before you look.',act:'Fix: extend retention to at least 12 months for key sources, using cheaper cold storage for older data.'},{ico:'🔇',name:'DC Not Onboarded',desc:'Domain controllers do not ship logs',tag:'LOGGING',clue:'If your domain controllers are not monitored, you will miss the attacks that matter most.',act:'Fix: onboard all DCs to the SIEM immediately and alert on Tier-0 events.'}]),decoys:[{ico:'📊',name:'SIEM',desc:'All sources onboarded, 12mo retention',tag:'LOGGING'},{ico:'👁️',name:'EDR Telemetry',desc:'Full process tree captured',tag:'LOGGING'},{ico:'🔔',name:'Alerting',desc:'Tier-0 events page the on-call',tag:'LOGGING'},{ico:'🧾',name:'Audit Policy',desc:'Advanced auditing enforced',tag:'LOGGING'}]},
+ {q:()=>'Which help-desk process do you abuse?',bad:()=>R([{ico:'☎️',name:'Phone Reset',desc:'Resets passwords after 2 personal questions',tag:'PROCESS',clue:'Knowledge-based verification is trivially defeated with public social-media details.',act:'Fix: verify via a callback to the number on record, a manager approval, or an MFA-backed self-service reset.'},{ico:'🔄',name:'MFA Re-enrol',desc:'Agents re-issue MFA on an email request',tag:'PROCESS',clue:'Re-enrolling MFA on request is exactly how attackers make stolen access permanent.',act:'Fix: require in-person or video identity verification for MFA resets, and log every re-enrolment.'}]),decoys:[{ico:'🎥',name:'Video ID Check',desc:'Required for all resets',tag:'PROCESS'},{ico:'📞',name:'Callback Policy',desc:'Only to the number on file',tag:'PROCESS'},{ico:'🎫',name:'Ticket Trail',desc:'Manager approval logged',tag:'PROCESS'},{ico:'🔐',name:'Self-Service',desc:'MFA-backed, no agent needed',tag:'IAM'}]},
+ {q:()=>'Which OT/ICS weakness is the real risk?',bad:()=>R([{ico:'🏭',name:'Flat IT/OT Network',desc:'Office LAN routes straight to the plant floor',tag:'OT',clue:'No separation means an office phishing click can reach safety-critical equipment.',act:'Fix: segment IT from OT with a DMZ and one-way data flows, following IEC 62443 zones and conduits.'},{ico:'💻',name:'Engineering Laptop',desc:'Dual-homed, browses the web and programs PLCs',tag:'OT',clue:'A dual-homed engineering workstation is the classic bridge attackers use into OT.',act:'Fix: dedicate OT laptops with no internet, enforce removable-media controls, and use a jump host.'}]),decoys:[{ico:'🧱',name:'OT DMZ',desc:'Data diode, one-way historian feed',tag:'OT'},{ico:'🔒',name:'PLC Key Switch',desc:'Physical run/program lock engaged',tag:'OT'},{ico:'👁️',name:'OT Monitoring',desc:'Passive protocol inspection',tag:'OT'},{ico:'📋',name:'Asset Inventory',desc:'Every device catalogued',tag:'OT'}]},
+ {q:()=>'Which password policy gap do you crack?',bad:()=>R([{ico:'🔑',name:'8-Char Minimum',desc:'No breach-list check, 90-day rotation',tag:'IAM',clue:'Short passwords plus forced rotation produce predictable patterns like Summer2026!',act:'Fix: require long passphrases, screen against breached-password lists, drop forced rotation, and add MFA.'},{ico:'📋',name:'No Breach Check',desc:'Reused passwords from public dumps accepted',tag:'IAM',clue:'Credential stuffing works because people reuse passwords already in public dumps.',act:'Fix: block known-breached passwords at set time and monitor for credential stuffing.'}]),decoys:[{ico:'🔐',name:'Passkeys',desc:'FIDO2 rollout complete',tag:'IAM'},{ico:'📏',name:'Passphrases',desc:'16-char minimum, no expiry',tag:'IAM'},{ico:'🚫',name:'Breach Filter',desc:'HIBP list enforced at set',tag:'IAM'},{ico:'🔒',name:'MFA Everywhere',desc:'Including legacy protocols',tag:'IAM'}]},
+ {q:()=>'Which insider risk do you exploit?',bad:()=>R([{ico:'🚪',name:'Leaver Accounts',desc:RN(20,120)+' accounts still active after departure',tag:'INSIDER',clue:'Orphaned accounts have no owner watching them, which makes them perfect for quiet access.',act:'Fix: automate deprovisioning from HR events, and run a monthly access recertification.'},{ico:'📈',name:'Access Creep',desc:'Staff keep every permission from past roles',tag:'INSIDER',clue:'Years of accumulated access means one compromised account opens everything.',act:'Fix: enforce role-based access with periodic recertification, and remove entitlements on role change.'}]),decoys:[{ico:'🔄',name:'Auto Deprovision',desc:'Triggered by HR system',tag:'INSIDER'},{ico:'📋',name:'Access Reviews',desc:'Quarterly, manager-signed',tag:'INSIDER'},{ico:'👁️',name:'UEBA',desc:'Baseline deviation alerts',tag:'INSIDER'},{ico:'🔐',name:'Least Privilege',desc:'Role-based, JIT elevation',tag:'IAM'}]},
+ {q:()=>'Which DNS/domain weakness do you take?',bad:()=>R([{ico:'👻',name:'Dangling CNAME',desc:'Points to a deleted cloud bucket',tag:'DNS',clue:'A dangling DNS record lets an attacker claim the resource and host content on your domain.',act:'Fix: remove stale DNS records, audit for dangling CNAMEs regularly, and decommission in the right order.'},{ico:'📅',name:'Expiring Domain',desc:'Old marketing domain lapses in 6 days',tag:'DNS',clue:'A lapsed domain still trusted by staff and partners can be re-registered by anyone.',act:'Fix: renew and lock important domains, enable auto-renew, and keep a domain inventory.'}]),decoys:[{ico:'🔒',name:'Registry Lock',desc:'Transfer lock enabled',tag:'DNS'},{ico:'🧾',name:'DNS Inventory',desc:'Records reviewed monthly',tag:'DNS'},{ico:'🛡️',name:'DNSSEC',desc:'Signed zones, validated',tag:'DNS'},{ico:'📡',name:'Monitoring',desc:'Alerts on record changes',tag:'DNS'}]},
+ {q:()=>'Which remote-access path is weakest?',bad:()=>R([{ico:'🌐',name:'Legacy SSL VPN',desc:'End-of-life appliance, password-only login',tag:'EDGE',clue:'An unsupported VPN appliance with no MFA is the most attacked device on the internet.',act:'Fix: replace the appliance, enforce MFA, and monitor for exploitation of known CVEs in the meantime.'},{ico:'🖥️',name:'Exposed Citrix',desc:'Published desktop, no conditional access',tag:'EDGE',clue:'Published remote desktops without conditional access accept any stolen credential from anywhere.',act:'Fix: put conditional access and MFA in front, restrict by geography and device posture, and patch.'}]),decoys:[{ico:'🔐',name:'ZTNA',desc:'Per-app access, device posture',tag:'EDGE'},{ico:'🔑',name:'MFA VPN',desc:'FIDO2, cert-based device check',tag:'EDGE'},{ico:'🧱',name:'Jump Host',desc:'Session recorded, PAM-brokered',tag:'EDGE'},{ico:'📍',name:'Geo Fencing',desc:'Allowed countries only',tag:'EDGE'}]},
+ {q:()=>'Which database exposure do you hit?',bad:()=>R([{ico:'🗄️',name:'Dev DB Copy',desc:'Full production data, no masking, weak password',tag:'DATA',clue:'Development environments hold the same real data with a fraction of the protection.',act:'Fix: mask or synthesise data in non-production, and apply the same access controls as production.'},{ico:'📊',name:'Reporting Replica',desc:'Read-only replica open to all staff',tag:'DATA',clue:'Read-only still means readable — every record is exposed to every employee.',act:'Fix: restrict the replica by role, apply row-level security, and log all queries.'}]),decoys:[{ico:'🔒',name:'Encrypted DB',desc:'TDE, keys in HSM',tag:'DATA'},{ico:'🎭',name:'Masked Dev',desc:'Synthetic data only',tag:'DATA'},{ico:'👁️',name:'DB Auditing',desc:'Query logging, anomaly alerts',tag:'DATA'},{ico:'🔐',name:'Row Security',desc:'Per-role data filtering',tag:'DATA'}]},
+ {q:()=>'Which browser/endpoint gap do you use?',bad:()=>R([{ico:'🧩',name:'Rogue Extension',desc:'Unvetted extension reads every page',tag:'HOST',clue:'A malicious browser extension sees every session token and everything you type.',act:'Fix: allowlist extensions by policy, review permissions, and block sideloaded installs.'},{ico:'👑',name:'Local Admin',desc:'All staff run as local administrator',tag:'HOST',clue:'Local admin turns any malware execution into full control of the machine.',act:'Fix: remove local admin rights, use a privilege-elevation tool for exceptions, and monitor elevation events.'}]),decoys:[{ico:'🚫',name:'Extension Policy',desc:'Allowlist enforced by GPO',tag:'HOST'},{ico:'🔐',name:'Standard User',desc:'No local admin, JIT elevation',tag:'HOST'},{ico:'👁️',name:'EDR',desc:'Behavioural blocking on',tag:'HOST'},{ico:'📦',name:'App Control',desc:'WDAC, signed apps only',tag:'HOST'}]}
+];
+function breachPool(){ return 9600; }
+function nextScenario(){
+  const a = ARCH[bag('ar',ARCH.length).draw()];
+  const bad = Object.assign({bad:true}, a.bad());
+  const decoys = pick3(a.decoys).map(d=>Object.assign({bad:false}, d));
+  const nodes = [bad, ...decoys];
+  for(let i=nodes.length-1;i>0;i--){ const j=RN(0,i); [nodes[i],nodes[j]]=[nodes[j],nodes[i]]; }
+  return { q:a.q(), nodes, bad };
+}
+
+
+/* ============================================================
+   LIVE BACKGROUND FIELD
+   One canvas, four moods. Blue-team modes (inbox sonar, SOC
+   telemetry) for the defence games; a red-team intrusion field
+   (code rain + attack-path graph) for Breach Point.
+============================================================ */
+const BG=(()=>{
+ const cv=$('bgfx');const ctx=cv.getContext('2d');
+ let mode='hub',W=0,H=0,raf=null,t=0,parts=[],cols=[],nodes=[],edges=[],rings=[],logs=[];
+ const PAL={
+  hub:{a:'#39e6d4',b:'#ff5d73',c:'#ffd23f'},
+  phish:{a:'#ff5d73',b:'#39e6d4',c:'#ffd23f'},
+  soc:{a:'#8fe635',b:'#ffd23f',c:'#3ee67a'},
+  breach:{a:'#b98cff',b:'#ff6ec7',c:'#ff5d73'}
+ };
+ const GLYPH='アカサタナハマヤラワイキシチニヒミリウクスツヌフムユルエケセテネヘメレオコソトノホモヨロ0123456789ABCDEF$#%&@';
+ function size(){W=cv.width=Math.floor(innerWidth);H=cv.height=Math.floor(innerHeight);build();}
+ function build(){
+  const n=Math.round(Math.min(46,Math.max(16,W*H/26000)));
+  parts=Array.from({length:n},()=>spark());
+  const cw=Math.max(16,Math.round(W/Math.min(46,Math.max(14,Math.round(W/26)))));
+  cols=Array.from({length:Math.ceil(W/cw)},(_,i)=>({x:i*cw+cw*.5,y:Math.random()*-H,sp:1.4+Math.random()*3.4,len:6+Math.round(Math.random()*14),cw}));
+  const nn=Math.min(11,Math.max(6,Math.round(W/190)));
+  nodes=Array.from({length:nn},()=>({x:.08*W+Math.random()*.84*W,y:.12*H+Math.random()*.76*H,r:2+Math.random()*2.6,ph:Math.random()*6.3}));
+  edges=[];
+  nodes.forEach((p,i)=>{const near=nodes.map((q,j)=>({j,d:Math.hypot(p.x-q.x,p.y-q.y)})).filter(o=>o.j!==i).sort((a,b)=>a.d-b.d).slice(0,2);
+   near.forEach(o=>{if(!edges.some(e=>(e.a===o.j&&e.b===i)))edges.push({a:i,b:o.j,ph:Math.random()*6.3});});});
+  rings=[];
+  logs=Array.from({length:Math.max(5,Math.round(H/64))},(_,i)=>({y:(i+.5)*(H/Math.max(5,Math.round(H/64))),x:Math.random()*W,sp:.35+Math.random()*1.5,w:30+Math.random()*150,o:.1+Math.random()*.35}));
+ }
+ function spark(){return{x:Math.random()*W,y:Math.random()*H,vy:-(.15+Math.random()*.5),vx:(Math.random()-.5)*.35,s:1.2+Math.random()*3.2,o:.15+Math.random()*.5,ph:Math.random()*6.3};}
+ function hexa(hex,a){const n=parseInt(hex.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+
+ function drawHub(p){
+  parts.forEach(q=>{q.x+=q.vx;q.y+=q.vy;if(q.y<-10){q.y=H+10;q.x=Math.random()*W;}
+   if(q.x<-10)q.x=W+10;if(q.x>W+10)q.x=-10;
+   const tw=q.o*(.6+.4*Math.sin(t*.05+q.ph));
+   ctx.save();ctx.translate(q.x,q.y);ctx.rotate(Math.PI/4);
+   ctx.fillStyle=hexa(q.ph>3?p.a:p.b,tw);ctx.fillRect(-q.s/2,-q.s/2,q.s,q.s);ctx.restore();});
+ }
+ function drawPhish(p){
+  // sonar sweeps from the bottom — "scanning the inbox"
+  if(t%90===0)rings.push({r:0,o:.5});
+  rings=rings.filter(r=>r.o>0.005);
+  rings.forEach(r=>{r.r+=1.9;r.o*=.986;ctx.beginPath();ctx.arc(W*.5,H*1.02,r.r,Math.PI,Math.PI*2);
+   ctx.strokeStyle=hexa(p.b,r.o*.5);ctx.lineWidth=1.6;ctx.stroke();});
+  // drifting envelopes
+  parts.forEach(q=>{q.x+=q.vx*1.3;q.y+=q.vy*1.5;if(q.y<-24){q.y=H+24;q.x=Math.random()*W;}
+   const s=q.s*3.4,o=q.o*.5*(.7+.3*Math.sin(t*.04+q.ph));
+   ctx.save();ctx.translate(q.x,q.y);ctx.rotate(Math.sin(t*.012+q.ph)*.24);
+   ctx.strokeStyle=hexa(q.ph>3.1?p.a:p.b,o);ctx.lineWidth=1.3;
+   ctx.strokeRect(-s,-s*.66,s*2,s*1.32);
+   ctx.beginPath();ctx.moveTo(-s,-s*.66);ctx.lineTo(0,s*.12);ctx.lineTo(s,-s*.66);ctx.stroke();
+   ctx.restore();});
+ }
+ function drawSoc(p){
+  // telemetry bars streaming right-to-left
+  logs.forEach(l=>{l.x-=l.sp;if(l.x<-l.w)  {l.x=W+Math.random()*180;l.w=30+Math.random()*150;l.o=.1+Math.random()*.35;}
+   ctx.fillStyle=hexa(p.a,l.o*.5);ctx.fillRect(l.x,l.y,l.w,2);
+   ctx.fillStyle=hexa(p.b,l.o*.34);ctx.fillRect(l.x+l.w+8,l.y,10,2);});
+  // heartbeat trace
+  ctx.beginPath();
+  for(let x=0;x<=W;x+=6){
+   const ph=(x/W*7)+t*.035;
+   let y=H*.5+Math.sin(ph)*8;
+   const beat=((x+t*2.4)%W)/W;
+   if(beat>.46&&beat<.54){const k=(beat-.46)/.08;y-=Math.sin(k*Math.PI)*Math.min(H*.16,74);}
+   x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle=hexa(p.c,.34);ctx.lineWidth=1.8;ctx.stroke();
+  parts.forEach(q=>{q.y+=q.vy*.6;if(q.y<-8){q.y=H+8;q.x=Math.random()*W;}
+   ctx.fillStyle=hexa(p.a,q.o*.35);ctx.fillRect(q.x,q.y,1.6,1.6);});
+ }
+ function drawBreach(p){
+  // code rain
+  ctx.font='13px ui-monospace,SFMono-Regular,Menlo,monospace';ctx.textAlign='center';
+  cols.forEach(c=>{
+   c.y+=c.sp;
+   if(c.y-c.len*15>H){c.y=Math.random()*-160;c.sp=1.4+Math.random()*3.4;c.len=6+Math.round(Math.random()*14);}
+   for(let i=0;i<c.len;i++){
+    const y=c.y-i*15;if(y<-15||y>H+15)continue;
+    const fade=(1-i/c.len);
+    ctx.fillStyle=i===0?hexa('#ffffff',.55*fade+.25):hexa(p.a,.42*fade);
+    ctx.fillText(GLYPH[(Math.floor(t*.12)+i*7+Math.floor(c.x))%GLYPH.length],c.x,y);
+   }});
+  ctx.textAlign='start';
+  // attack-path graph lighting up hop by hop
+  edges.forEach((e,i)=>{
+   const a=nodes[e.a],b=nodes[e.b];
+   const pulse=(Math.sin(t*.03+e.ph)+1)/2;
+   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+   ctx.strokeStyle=hexa(p.b,.06+pulse*.2);ctx.lineWidth=1;ctx.stroke();
+   const k=((t*.006+i*.21)%1);
+   ctx.beginPath();ctx.arc(a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,1.8,0,6.3);
+   ctx.fillStyle=hexa(p.c,.6*(1-Math.abs(k-.5)*1.4));ctx.fill();
+  });
+  nodes.forEach(n=>{const g=(Math.sin(t*.045+n.ph)+1)/2;
+   ctx.beginPath();ctx.arc(n.x,n.y,n.r+g*1.6,0,6.3);ctx.fillStyle=hexa(p.a,.32+g*.28);ctx.fill();
+   ctx.beginPath();ctx.arc(n.x,n.y,n.r+7+g*5,0,6.3);ctx.strokeStyle=hexa(p.a,.1+g*.1);ctx.lineWidth=1;ctx.stroke();});
+ }
+ function frame(){
+  t++;ctx.clearRect(0,0,W,H);const p=PAL[mode]||PAL.hub;
+  if(mode==='phish')drawPhish(p);else if(mode==='soc')drawSoc(p);else if(mode==='breach')drawBreach(p);else drawHub(p);
+  raf=requestAnimationFrame(frame);
+ }
+ function start(){if(REDUCED)return;if(!raf)raf=requestAnimationFrame(frame);}
+ function stop(){if(raf){cancelAnimationFrame(raf);raf=null;}}
+ addEventListener('resize',()=>{size();},{passive:true});
+ size();
+ if(REDUCED){cv.style.display='none';}else start();
+ return{setMode(m){if(mode===m)return;mode=m;rings=[];build();},start,stop};
+})();
 
 /* ============================================================
    ENGINE
@@ -745,30 +1188,79 @@ const ARCADE=(function(){
   phish:{kind:'INBOX SHOWDOWN',title:['PHISH','HUNTER'],theme:'phish',boardKey:'dm_phish',hi:'hi-phish',
     sub:'Some emails are real. Some are really good fakes.<br>You\'ve got <b>60 seconds</b> — trust the address, not the logo.',
     rules:['✓ Correct <b>+100</b>','🔥 3-streak = <b>×multiplier</b>','✗ Wrong <b>−50</b>'],
-    fresh:()=>'Fresh inbox every game · '+phishPool().toLocaleString()+'+ possible emails',
+    fresh:()=>''+phishPool().toLocaleString()+'+ possible emails · never the same inbox twice',
     hudR:'STREAK',
     steps:[['Read the sender — fast','The address matters more than the logo. Watch for lookalikes: rnicrosoft, netfIix, a sneaky .xyz.'],['Tap LEGIT or PHISH','Right = +100. Wrong = −50, and you learn the tell you missed.'],['Build a streak','3 in a row = ×2, up to ×5. One slip resets it.']],
     tip:'Urgency is the attacker\'s favourite weapon. If an email is rushing you, slow down.'},
   soc:{kind:'SOC SHIFT',title:['ALERT','RUSH'],theme:'soc',boardKey:'dm_soc',hi:'hi-soc',
     sub:'You\'re the analyst on shift. Alerts pour in with burning fuses —<br><b>escalate real threats, dismiss the noise.</b>',
     rules:['🚨 Real threat <b>+150</b>','🧹 Noise cleared <b>+100</b>','✗ Wrong <b>−75</b>','💥 Ignored threat <b>−100</b>'],
-    fresh:()=>'Alerts generated fresh each shift · '+socPool().toLocaleString()+'+ variations',
+    fresh:()=>''+socPool().toLocaleString()+'+ alert variations · no alert repeats in a shift',
     hudR:'HANDLED',
     steps:[['Alerts hit your queue','Each has a severity, a source, and a burning fuse. Ignore a real threat too long and it becomes a breach.'],['ESCALATE or DISMISS','Real threat escalated = +150. False positive cleared = +100. Wrong call = −75 and your SLA drops.'],['Survive the surge','Halfway through, the queue speeds up. Welcome to a real Tuesday.']],
     tip:'Severity isn\'t the verdict. A LOW can be a real threat; a CRITICAL can be your own test file.'},
   breach:{kind:'THINK LIKE AN ATTACKER',title:['BREACH','POINT'],theme:'breach',boardKey:'dm_breach',hi:'hi-breach',
     sub:'Every network has one weak link. <b>Tap it before our pentesters would.</b><br>Faster + correct = bigger score.',
     rules:['🎯 Right target <b>+120</b>','⚡ Speed bonus <b>+80</b>','🔥 Streak <b>×mult</b>','✗ Wrong <b>−60</b>'],
-    fresh:()=>'Scenarios randomized every run · '+breachPool().toLocaleString()+'+ board combos',
+    fresh:()=>''+breachPool().toLocaleString()+'+ board combos · every engagement is new',
     hudR:'STREAK',
     steps:[['Scan the scene','Four targets: servers, people, ports, passwords. The little details reveal the weakness.'],['Tap the weakest link','Right = +120 plus a speed bonus. Wrong = −60 and the real flaw is revealed.'],['Chain your streak','Streaks multiply up to ×5. Default passwords first, ancient servers second.']],
     tip:'Attackers don\'t pick the strongest lock. They walk the building until they find the open window.'}
  };
 
- function show(id){['hub','start','game','end','review'].forEach(s=>$(s).classList.toggle('on',s===id));}
- function setTheme(t){document.body.dataset.game=t;}
- function refreshHi(){['phish','soc','breach'].forEach(g=>{const b=loadBoardFor(g);$(META[g].hi).textContent=b.length?b[0].s:'—';
-     fetchServerBoard(g).then(server=>{if(server){localPersist(g,server);$(META[g].hi).textContent=server.length?server[0].s:'—';}});});}
+ // leaving the play area must also clear anything the game left floating on screen
+ // (toasts, the event banner, floating score pops) — otherwise they hang over the score/review screens
+ function clearFloaters(){
+   const t=$('toast');t.classList.remove('show');clearTimeout(toastTimer);
+   hideEvent();
+   document.querySelectorAll('.fx-pop').forEach(el=>el.remove());
+ }
+ function show(id){
+   if(id!=='game')clearFloaters();
+   ['hub','start','game','end','review'].forEach(s=>$(s).classList.toggle('on',s===id));
+ }
+ function setTheme(t){document.body.dataset.game=t;BG.setMode(t);}
+
+ /* ---- Hall of Fame (hub leaderboard across every game) ---- */
+ let hallTab='all';
+ const GLABEL={phish:'PHISH',soc:'SOC',breach:'BREACH'};
+ function hall(which,btn){
+   if(which){hallTab=which;}
+   if(btn){[...$('lbtabs').children].forEach(b=>b.classList.toggle('on',b===btn));}
+   renderHall();
+ }
+ function renderHall(){
+   const body=$('lbbody');if(!body)return;
+   let rows=[];
+   if(hallTab==='all'){
+     ['phish','soc','breach'].forEach(g=>loadBoardFor(g).forEach(r=>rows.push({n:r.n,s:r.s,g:g})));
+     rows.sort((a,b)=>b.s-a.s);rows=rows.slice(0,8);
+   } else {
+     rows=loadBoardFor(hallTab).slice(0,8).map(r=>({n:r.n,s:r.s,g:hallTab}));
+   }
+   if(!rows.length){
+     body.innerHTML='<div class="lbempty">No scores yet — be the first name on the board.<br>Pick a game above and play 60 seconds.</div>';
+   } else {
+     body.innerHTML=rows.map((r,i)=>'<div class="lbrow'+(i===0?' top1':i===1?' top2':i===2?' top3':'')+'">'+
+       '<span class="pos">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1))+'</span>'+
+       '<span class="who">'+esc(r.n)+(hallTab==='all'?'<span class="gm '+r.g+'">'+GLABEL[r.g]+'</span>':'')+'</span>'+
+       '<span class="pts">'+r.s+'</span></div>').join('');
+   }
+   const online=apiBase()!==null;
+   $('lblive').classList.toggle('off',!online);
+   $('lblivetxt').textContent=online?'LIVE · SHARED':'THIS DEVICE';
+   $('lbnote').textContent=online
+     ? 'One shared board across every phone, tablet and screen at the stand — updates within seconds.'
+     : 'Running offline, so this board is stored on this device only.';
+ }
+
+ function refreshHi(){
+   ['phish','soc','breach'].forEach(g=>{
+     const b=loadBoardFor(g);$(META[g].hi).textContent=b.length?b[0].s:'—';
+     fetchServerBoard(g).then(server=>{if(server){localPersist(g,server);$(META[g].hi).textContent=server.length?server[0].s:'—';renderHall();}});
+   });
+   renderHall();
+ }
 
  function goHub(){stopAll();setTheme('hub');$('nav').classList.remove('on');MUSIC.play('menu');show('hub');refreshHi();}
  function toggleSfx(){const m=!SFX.isMuted();SFX.setMuted(m);$('mutebtn').textContent=m?'🔇 SFX':'🔊 SFX';}
@@ -786,7 +1278,7 @@ const ARCADE=(function(){
  function openSetup(){
    $('modalbox').innerHTML='<button class="x" onclick="ARCADE.closeModal()">✕</button>'+
      '<div class="mkind">BOOTH CREW</div><h2>Kiosk setup</h2>'+
-     '<p class="mbody"><b>1.</b> Open this file in the tablet browser.<br><b>2.</b> Share → <b>Add to Home Screen</b> → launch from the icon for fullscreen.<br><b>3.</b> Turn on <b>Guided Access</b> (iPad: Settings → Accessibility) or <b>Screen Pinning</b> (Android) so visitors stay in the arcade.<br><b>4.</b> Set the display to never sleep, brightness up.<br><br>Everything runs <b>offline</b> — no WiFi needed. Each game keeps its own leaderboard on this tablet; clear the browser\'s site data to reset scores for a new day.</p>'+
+     '<p class="mbody"><b>1.</b> Open the arcade URL in the tablet browser.<br><b>2.</b> Share → <b>Add to Home Screen</b> → launch from the icon for fullscreen.<br><b>3.</b> Turn on <b>Guided Access</b> (iPad: Settings → Accessibility) or <b>Screen Pinning</b> (Android) so visitors stay in the arcade.<br><b>4.</b> Set the display to never sleep, brightness up.<br><br><b>Leaderboard:</b> when the arcade is served online, every tablet and phone shares one live board — scores appear on all of them within seconds. Opened as a plain file it still works fully offline, keeping scores on that device only.</p>'+
      '<button class="mgo" onclick="ARCADE.closeModal()">GOT IT</button>';
    $('modal').classList.add('on');
  }
@@ -807,7 +1299,7 @@ const ARCADE=(function(){
    running=true;locked=false;score=0;streak=0;bestStreak=0;history=[];lastTickSec=99;lastShownScore=0;
    caught=correct=wrong=0;handled=threats=fps=missed=0;sla=100;owned=0;
    cardNo=0;cur=null;dbl=0;eventFired=false;live=[];uid=0;surged=false;SPAWN_MS=2600;ALERT_TTL=8000;curNodes=null;roundNo=0;
-   phUsed.clear();socUsed.clear();archUsed.length=0;
+   resetPools();
    $('hud-l').innerHTML='SCORE<b id="score">0</b>';
    $('hud-r').innerHTML=m.hudR+'<b id="rstat">'+(game==='soc'?'0':'×1')+'</b>';
    hideEvent();
@@ -937,7 +1429,7 @@ const ARCADE=(function(){
  function saveScore(){
    const name=($('initials').value||'AAA').toUpperCase().slice(0,3);
    let b=loadBoard();b.push({n:name,s:score});b.sort((x,y)=>y.s-x.s);b=b.slice(0,10);localPersist(game,b);
-   $('initialsRow').style.display='none';renderBoard(score);SFX.good();if(b.length&&b[0].s===score)confettiBurst(themeColors());
+   $('initialsRow').style.display='none';renderBoard(score);renderHall();SFX.good();if(b.length&&b[0].s===score)confettiBurst(themeColors());
    // push to shared server board (if hosted) and refresh with authoritative list
    const g=game;postServerScore(g,name,score).then(server=>{if(server){localPersist(g,server);if(game===g)renderBoard(score);refreshHi();}});
  }
@@ -961,11 +1453,11 @@ const ARCADE=(function(){
        '<div class="rvsec why"><span class="h">Why</span>'+esc(h.reason)+'</div>'+
        '<div class="rvsec act"><span class="h">What to do</span>'+esc(h.act)+'</div></div>';
    }).join('');
-   $('review').scrollTop=0;show('review');
+   $('rvscroll').scrollTop=0;show('review');
  }
  function closeReview(){show('end');}
 
- return{goHub,toggleSfx,toggleMusic,how,openSetup,closeModal,start,begin,act,saveScore,openReview,closeReview,_phish:phishAnswer,_hi:refreshHi};
+ return{goHub,toggleSfx,toggleMusic,how,openSetup,closeModal,start,begin,act,saveScore,openReview,closeReview,hall,_phish:phishAnswer,_hi:refreshHi};
 })();
 
 $('btnLegit').addEventListener('click',()=>ARCADE._phish(false));
