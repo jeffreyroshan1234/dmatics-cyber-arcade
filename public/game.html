@@ -324,14 +324,54 @@
   .modal p.mbody b{color:var(--ink);}
 
   #confetti{position:fixed;inset:0;pointer-events:none;z-index:66;}
-  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}#crt{opacity:.28;}}
+
+  /* ===== v3.1 ARCADE ANIMATIONS ===== */
+  /* screen transitions (not the game screen — it owns the shake transform) */
+  .screen.on:not(#game){animation:screenIn .34s ease both;}
+  @keyframes screenIn{from{opacity:0;transform:translateY(1.4vmin) scale(.996);}to{opacity:1;transform:none;}}
+  /* synthwave grid floor, hub only */
+  #floor{position:fixed;left:-25%;right:-25%;bottom:0;height:46%;z-index:1;pointer-events:none;display:none;opacity:.16;
+    background-image:linear-gradient(var(--acc) 2px,transparent 2px),linear-gradient(90deg,var(--acc) 2px,transparent 2px);
+    background-size:calc(var(--u)*2.6) calc(var(--u)*2.6);
+    transform:perspective(300px) rotateX(64deg);transform-origin:bottom center;
+    -webkit-mask-image:linear-gradient(to top,#000,transparent 92%);mask-image:linear-gradient(to top,#000,transparent 92%);
+    animation:floormove 2.4s linear infinite;}
+  body[data-game="hub"] #floor{display:block;}
+  @keyframes floormove{from{background-position-y:0,0;}to{background-position-y:calc(var(--u)*2.6),0;}}
+  /* staggered cabinet entrance */
+  .cab{animation:cabIn .5s both;}
+  .cab:nth-child(1){animation-delay:.04s;}.cab:nth-child(2){animation-delay:.13s;}.cab:nth-child(3){animation-delay:.22s;}
+  @keyframes cabIn{from{opacity:0;transform:translateY(2.2vmin) rotate(var(--tilt,0deg)) scale(.95);}to{opacity:1;transform:rotate(var(--tilt,0deg));}}
+  /* pulsing icon glow */
+  .icobox{animation:iglow 2.4s ease-in-out infinite;}
+  @keyframes iglow{0%,100%{box-shadow:0 0 1em color-mix(in srgb,var(--gc) 35%,transparent);}50%{box-shadow:0 0 2.2em color-mix(in srgb,var(--gc) 75%,transparent);}}
+  /* timer danger pulse */
+  #timerbar.danger{animation:tpulse .55s ease-in-out infinite;}
+  @keyframes tpulse{50%{filter:brightness(1.5);}}
+  /* light sweep across primary buttons */
+  .bigbtn,.play{position:relative;overflow:hidden;}
+  .bigbtn::after,.play::after{content:'';position:absolute;top:0;left:-70%;width:45%;height:100%;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);transform:skewX(-20deg);animation:sheen 3.2s ease-in-out infinite;}
+  @keyframes sheen{0%{left:-70%;}58%{left:150%;}100%{left:150%;}}
+  /* final score count-up bump + rank pop */
+  .finalscore.bump{animation:bump .45s;}
+  @keyframes bump{0%{transform:scale(.6);opacity:.3;}60%{transform:scale(1.12);}100%{transform:scale(1);}}
+  .rank.pop{animation:rankpop .5s .08s both;}
+  @keyframes rankpop{from{opacity:0;transform:rotate(-1deg) scale(.6);}to{opacity:1;transform:rotate(-1deg) scale(1);}}
+  /* live score tick */
+  #score.tick{animation:stick .2s;}
+  @keyframes stick{50%{transform:scale(1.28);color:var(--acc2);}}
+  /* insert-coin gentle float */
+  .insert{will-change:transform;}
+
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}#crt{opacity:.28;}#floor{display:none!important;}}
   /* very short landscape phones: tighten */
   @media(max-height:430px){ :root{--u:clamp(8px,2.3vmin,15px);} .hubwrap{padding-top:calc(var(--u)*3.4);} }
 </style>
 </head>
 <body data-game="hub">
 
-<div id="grain"></div><div id="vig"></div><div id="crt"></div>
+<div id="floor"></div><div id="grain"></div><div id="vig"></div><div id="crt"></div>
 
 <div class="navrow" id="nav">
   <button class="navchip" onclick="ARCADE.goHub()">◄ ARCADE</button>
@@ -550,6 +590,8 @@ function confettiBurst(colors){const cv=$('confetti'),ctx=cv.getContext('2d');cv
  const ps=Array.from({length:140},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.4,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,s:5+Math.random()*8,c:R(colors),r:Math.random()*6.3,vr:(Math.random()-.5)*.3}));
  const t0=Date.now();(function f(){ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();});if(Date.now()-t0<2600)requestAnimationFrame(f);else ctx.clearRect(0,0,cv.width,cv.height);})();}
 function popPts(txt,color){const p=document.createElement('div');p.className='fx-pop';p.textContent=txt;p.style.color=color;p.style.left=(innerWidth/2+RN(-70,70))+'px';p.style.top=(innerHeight*0.42)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),850);}
+const REDUCED=(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function animateCount(el,to,dur){if(REDUCED||to<=0){el.textContent=to;return;}const t0=performance.now();(function f(now){const p=Math.min(1,(now-t0)/dur);const e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e);if(p<1)requestAnimationFrame(f);})(performance.now());}
 let toastTimer=null;function toast(kind,msg){const t=$('toast');t.className=kind+' show';t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),kind==='bad'?1500:820);}
 
 /* ============================================================
@@ -762,7 +804,7 @@ const ARCADE=(function(){
 
  function begin(){
    const m=META[game];SFX.coin();MUSIC.play(game);
-   running=true;locked=false;score=0;streak=0;bestStreak=0;history=[];lastTickSec=99;
+   running=true;locked=false;score=0;streak=0;bestStreak=0;history=[];lastTickSec=99;lastShownScore=0;
    caught=correct=wrong=0;handled=threats=fps=missed=0;sla=100;owned=0;
    cardNo=0;cur=null;dbl=0;eventFired=false;live=[];uid=0;surged=false;SPAWN_MS=2600;ALERT_TTL=8000;curNodes=null;roundNo=0;
    phUsed.clear();socUsed.clear();archUsed.length=0;
@@ -790,7 +832,9 @@ const ARCADE=(function(){
    if(left<=0)endGame();
  }
  function mult(){return Math.min(1+Math.floor(streak/3),5);}
- function hud(){$('score').textContent=score;if(game==='soc')$('rstat').textContent=handled;else $('rstat').innerHTML='×'+mult()+(streak>0?' '+'🔥'.repeat(Math.min(streak,3)):'');}
+ let lastShownScore=0;
+ function hud(){const se=$('score');if(se){se.textContent=score;if(score!==lastShownScore&&!REDUCED){se.classList.remove('tick');void se.offsetWidth;se.classList.add('tick');}lastShownScore=score;}
+   if(game==='soc')$('rstat').textContent=handled;else $('rstat').innerHTML='×'+mult()+(streak>0?' '+'🔥'.repeat(Math.min(streak,3)):'');}
  function hideEvent(){$('eventbn').classList.remove('on');$('eventbn').style.display='none';}
  function showEvent(txt,bg,fg){const b=$('eventbn');b.textContent=txt;b.style.background=bg;b.style.color=fg;b.style.display='block';b.classList.add('on');}
 
@@ -857,7 +901,9 @@ const ARCADE=(function(){
  function endGame(){stopAll();hideEvent();SFX.end();MUSIC.play('menu');
    const total=correct+wrong,rk=ranks(game,score);
    $('e-kind').textContent=game==='soc'?'SHIFT OVER':(game==='breach'?'ENGAGEMENT COMPLETE':'TIME\'S UP!');
-   $('finalscore').textContent=score;$('rank').textContent=rk[0];$('quip').textContent=rk[1];
+   const fe=$('finalscore');fe.classList.remove('bump');void fe.offsetWidth;fe.classList.add('bump');animateCount(fe,score,850);
+   const re=$('rank');re.textContent=rk[0];re.classList.remove('pop');void re.offsetWidth;re.classList.add('pop');
+   $('quip').textContent=rk[1];
    let stats='';
    if(game==='phish')stats='<div><b>'+caught+'</b>PHISH CAUGHT</div><div><b>'+(total?Math.round(correct/total*100):0)+'%</b>ACCURACY</div><div><b>×'+Math.min(1+Math.floor(bestStreak/3),5)+'</b>BEST STREAK</div>';
    else if(game==='soc')stats='<div><b>'+threats+'</b>THREATS STOPPED</div><div><b>'+fps+'</b>NOISE CLEARED</div><div><b>'+missed+'</b>BREACHES MISSED</div><div><b>'+sla+'%</b>SLA</div>';
