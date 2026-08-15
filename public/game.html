@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0713">
+<title>DMATICS Cyber Arcade — GISEC 2026</title>
+<style>
+  /* ============================================================
+     RESPONSIVE FOUNDATION
+     --u : one scalable unit that tracks the SHORTER screen edge,
+           clamped so it never gets too tiny or too huge. Every
+           size in the app is built from --u (or clamp/min), so the
+           whole thing rescales smoothly on any phone / tablet /
+           touchscreen, portrait or landscape.
+  ============================================================ */
+  :root{
+    --u: clamp(9px, 2.6vmin, 20px);
+    --ink:#f4f7ff; --sub:#a99fc9;
+    --acc:#ff5d73; --acc2:#39e6d4; --amber:#ffd23f;
+    --good:#3ee67a; --bad:#ff5d73; --miss:#ff9d3c;
+    --edge:rgba(244,247,255,.14);
+    --panel:#1a1330; --panel2:#221844;
+    --bg:#0a0713;
+    --neon: var(--acc);
+  }
+  body[data-game="phish"]{--acc:#ff5d73;--acc2:#39e6d4;--accdk:#a02638;--neon:#ff5d73;--bg:#0d0710;--panel:#20131c;--panel2:#2b1926;}
+  body[data-game="soc"]{--acc:#8fe635;--acc2:#ffd23f;--accdk:#4d7a12;--neon:#8fe635;--bg:#080d07;--panel:#141d0f;--panel2:#1b2714;}
+  body[data-game="breach"]{--acc:#b98cff;--acc2:#ff6ec7;--accdk:#5f3ec4;--neon:#b98cff;--bg:#0b0714;--panel:#181030;--panel2:#211843;}
+  body[data-game="hub"]{--acc:#39e6d4;--acc2:#ff5d73;--accdk:#1a8f80;--neon:#39e6d4;--bg:#0a0713;--panel:#1a1330;--panel2:#221844;}
+
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
+  body{
+    font-family:ui-rounded,-apple-system,"SF Pro Rounded","Segoe UI",system-ui,sans-serif;
+    color:var(--ink);transition:background .35s;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* CRT scanlines + vignette + grain = arcade cabinet */
+  #crt{position:fixed;inset:0;pointer-events:none;z-index:70;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.16) 3px,rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;opacity:.5;}
+  #vig{position:fixed;inset:0;pointer-events:none;z-index:69;
+    background:radial-gradient(ellipse 100% 100% at 50% 50%,transparent 62%,rgba(0,0,0,.55) 100%);}
+  #grain{position:fixed;inset:0;pointer-events:none;z-index:68;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;transition:background .35s;
+    background:radial-gradient(ellipse 80% 55% at 18% -8%,color-mix(in srgb,var(--acc) 20%,transparent),transparent 60%),
+               radial-gradient(ellipse 65% 50% at 100% 108%,color-mix(in srgb,var(--acc2) 16%,transparent),transparent 60%);}
+
+  .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    z-index:2;padding:max(env(safe-area-inset-top),2vmin) max(env(safe-area-inset-right),2vmin) max(env(safe-area-inset-bottom),2vmin) max(env(safe-area-inset-left),2vmin);
+    overflow:hidden;}
+  .screen.on{display:flex;}
+  #hub.on,#review.on{overflow-y:auto;justify-content:flex-start;}
+  #game.on{justify-content:flex-start;padding:0;}
+  body.shake #game{animation:shk .3s;}
+  @keyframes shk{0%,100%{transform:none}20%{transform:translate(-1.2vmin,.3vmin)}40%{transform:translate(1vmin,-.3vmin)}60%{transform:translate(-.6vmin,.1vmin)}80%{transform:translate(.3vmin,0)}}
+
+  /* neon text */
+  .neon{color:var(--acc);text-shadow:0 0 calc(var(--u)*.4) color-mix(in srgb,var(--acc) 80%,transparent),0 0 calc(var(--u)*1.2) color-mix(in srgb,var(--acc) 55%,transparent);}
+  .flick{animation:flick 4.5s infinite;}
+  @keyframes flick{0%,96%,100%{opacity:1}97%{opacity:.72}98%{opacity:1}99%{opacity:.85}}
+
+  .sticker{display:inline-block;transform:rotate(-2deg);background:var(--amber);color:#241800;font-weight:800;
+    font-size:calc(var(--u)*.9);letter-spacing:.15em;padding:.5em 1.1em;border-radius:.7em;
+    box-shadow:.2em .2em 0 rgba(0,0,0,.5);text-align:center;}
+  h1.title{font-size:min(15vw,calc(var(--u)*4.4));font-weight:800;letter-spacing:-.01em;line-height:.95;text-align:center;}
+  .hl{position:relative;display:inline-block;color:var(--acc);}
+  .hl::after{content:'';position:absolute;left:0;right:0;bottom:-.12em;height:.09em;border-radius:99px;
+    background:var(--acc);box-shadow:0 0 .6em var(--acc);}
+
+  .navrow{position:fixed;top:max(env(safe-area-inset-top),1.4vmin);left:1.6vmin;right:1.6vmin;
+    display:none;justify-content:space-between;gap:1vmin;z-index:40;}
+  .navrow.on{display:flex;}
+  .navchip{display:flex;align-items:center;gap:.4em;background:rgba(244,247,255,.08);border:.14em solid var(--edge);
+    color:var(--sub);font-weight:700;font-size:calc(var(--u)*.82);padding:.55em 1em;border-radius:99px;cursor:pointer;font-family:inherit;min-height:2.6em;}
+  .navchip:active{background:rgba(244,247,255,.16);transform:scale(.96);}
+  .navgroup{display:flex;gap:.8vmin;}
+
+  .bigbtn{border:none;cursor:pointer;font-weight:800;letter-spacing:.08em;font-family:inherit;
+    font-size:calc(var(--u)*1.35);color:#12060a;padding:.8em 2.1em;border-radius:.75em;background:var(--acc);
+    box-shadow:0 .32em 0 var(--accdk),0 0 1.4em color-mix(in srgb,var(--acc) 55%,transparent);
+    transition:transform .08s,box-shadow .08s;min-height:2.9em;}
+  .bigbtn:active{transform:translateY(.28em);box-shadow:0 .06em 0 var(--accdk);}
+  .bigbtn.pulse{animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 .32em 0 var(--accdk),0 0 1em color-mix(in srgb,var(--acc) 45%,transparent);}50%{box-shadow:0 .32em 0 var(--accdk),0 0 2.2em color-mix(in srgb,var(--acc) 80%,transparent);}}
+  .btn2{background:none;border:.14em solid var(--edge);color:var(--sub);font-weight:700;font-family:inherit;cursor:pointer;
+    padding:.85em 1.5em;border-radius:.7em;font-size:calc(var(--u)*.95);min-height:2.9em;}
+  .btn2:active{background:rgba(244,247,255,.08);transform:scale(.97);}
+
+  /* ---------------- HUB ---------------- */
+  .hubwrap{width:100%;max-width:min(1060px,94vw);margin:auto;display:flex;flex-direction:column;align-items:center;
+    gap:calc(var(--u)*1.1);padding:calc(var(--u)*3) 0 calc(var(--u)*1.5);}
+  .marquee{text-align:center;}
+  .marquee .sticker{margin-bottom:calc(var(--u)*.9);}
+  .tag{margin-top:calc(var(--u)*.9);color:var(--sub);font-size:calc(var(--u)*1.02);font-weight:500;line-height:1.5;text-align:center;max-width:34em;}
+  .tag b{color:var(--ink);}
+  .insert{margin-top:calc(var(--u)*.4);font-size:calc(var(--u)*.9);letter-spacing:.28em;font-weight:800;color:var(--acc2);animation:blink 1.1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .grid{display:grid;gap:calc(var(--u)*1);grid-template-columns:1fr;width:100%;}
+  @media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr);}}
+  .cab{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));border:.16em solid var(--edge);
+    border-radius:calc(var(--u)*1.3);padding:calc(var(--u)*1.4);display:flex;flex-direction:column;gap:calc(var(--u)*.7);
+    overflow:hidden;transform:rotate(var(--tilt,0deg));box-shadow:0 .5em 0 rgba(0,0,0,.35);}
+  .cab:nth-child(1){--tilt:-.5deg;--gc:#ff5d73;}
+  .cab:nth-child(2){--tilt:.4deg;--gc:#8fe635;}
+  .cab:nth-child(3){--tilt:-.35deg;--gc:#b98cff;}
+  .cab .num{position:absolute;top:-.25em;right:.1em;font-size:calc(var(--u)*6);font-weight:800;color:rgba(244,247,255,.05);line-height:1;}
+  .cab .glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 55% at 50% -10%,color-mix(in srgb,var(--gc) 22%,transparent),transparent 65%);}
+  .icobox{width:calc(var(--u)*3.6);height:calc(var(--u)*3.6);border-radius:calc(var(--u)*1);display:flex;align-items:center;justify-content:center;
+    background:color-mix(in srgb,var(--gc) 20%,transparent);border:.14em solid color-mix(in srgb,var(--gc) 50%,transparent);box-shadow:0 0 1.2em color-mix(in srgb,var(--gc) 40%,transparent);}
+  .icobox svg{width:calc(var(--u)*2);height:calc(var(--u)*2);stroke:var(--gc);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .cab .kind{font-size:calc(var(--u)*.72);letter-spacing:.2em;font-weight:800;color:var(--gc);}
+  .cab h2{font-size:calc(var(--u)*1.6);font-weight:800;letter-spacing:-.01em;}
+  .cab p{color:var(--sub);font-size:calc(var(--u)*.94);line-height:1.45;flex:1;}
+  .hiscore{display:flex;align-items:center;gap:.5em;font-size:calc(var(--u)*.8);font-weight:700;color:var(--amber);letter-spacing:.05em;}
+  .hiscore .lbl{color:var(--sub);}
+  .btnrow{display:flex;gap:.7em;margin-top:.2em;}
+  .play{flex:1;display:flex;align-items:center;justify-content:center;gap:.4em;background:var(--gc);color:#0c0a06;font-weight:800;
+    font-size:calc(var(--u)*1.05);letter-spacing:.04em;padding:.8em .5em;border-radius:.65em;border:none;cursor:pointer;font-family:inherit;min-height:2.9em;
+    box-shadow:0 .3em 0 color-mix(in srgb,var(--gc) 55%,#000),0 0 1em color-mix(in srgb,var(--gc) 40%,transparent);transition:transform .08s,box-shadow .08s;}
+  .play:active{transform:translateY(.26em);box-shadow:0 .05em 0 color-mix(in srgb,var(--gc) 55%,#000);}
+  .how{background:none;border:.14em solid var(--edge);color:var(--sub);font-weight:700;font-size:calc(var(--u)*.9);padding:0 1.1em;border-radius:.65em;cursor:pointer;font-family:inherit;min-height:2.9em;}
+  .how:active{background:rgba(244,247,255,.08);}
+  .hubfoot{display:flex;align-items:center;gap:.8em;flex-wrap:wrap;justify-content:center;margin-top:calc(var(--u)*.4);}
+  .foot{color:#6b5f8c;font-size:calc(var(--u)*.82);letter-spacing:.15em;font-weight:600;text-align:center;}
+  .setupchip{background:rgba(244,247,255,.06);border:.14em solid var(--edge);color:var(--sub);font-weight:700;
+    font-size:calc(var(--u)*.82);padding:.6em 1.1em;border-radius:99px;cursor:pointer;font-family:inherit;}
+  .setupchip:active{background:rgba(244,247,255,.12);}
+
+  /* ---------------- START ---------------- */
+  .startwrap{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.9);text-align:center;max-width:38em;}
+  .subtitle{font-size:calc(var(--u)*1.05);color:var(--sub);line-height:1.5;font-weight:500;}
+  .subtitle b{color:var(--ink);}
+  .rules{display:flex;gap:.6em;flex-wrap:wrap;justify-content:center;}
+  .rule{background:rgba(244,247,255,.05);border:.14em solid var(--edge);border-radius:.6em;padding:.55em .9em;font-size:calc(var(--u)*.85);color:var(--sub);font-weight:600;}
+  .rule b{color:var(--ink);}
+  .freshness{font-size:calc(var(--u)*.8);color:var(--sub);opacity:.7;font-weight:600;}
+
+  /* ---------------- HUD ---------------- */
+  .hud{width:100%;max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1.4vmin;
+    padding:calc(env(safe-area-inset-top) + 3.4em) calc(var(--u)*1.1) calc(var(--u)*.4);}
+  .stat{font-size:calc(var(--u)*.72);color:var(--sub);letter-spacing:.14em;font-weight:800;text-align:center;}
+  .stat b{display:block;font-size:calc(var(--u)*1.9);color:var(--ink);letter-spacing:0;}
+  #combo b,#hud-r b{color:var(--acc2);}
+  #timerwrap{flex:1;max-width:44%;}
+  #timerbar-bg{height:calc(var(--u)*.9);background:rgba(244,247,255,.1);border-radius:99px;overflow:hidden;border:.14em solid var(--edge);}
+  #timerbar{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width .18s linear;box-shadow:0 0 .6em var(--acc2);}
+  #timerbar.danger{background:linear-gradient(90deg,#ff5d73,#ffd23f);}
+  #timenum{text-align:center;font-size:calc(var(--u)*.72);color:var(--sub);margin-top:.3em;letter-spacing:.14em;font-weight:800;}
+  #slawrap{display:none;width:100%;max-width:900px;margin:0 auto;align-items:center;gap:.7em;padding:0 calc(var(--u)*1.1) calc(var(--u)*.3);}
+  #slawrap.on{display:flex;}
+  #slawrap span{font-size:calc(var(--u)*.66);letter-spacing:.14em;color:var(--sub);white-space:nowrap;font-weight:800;}
+  #slabg{flex:1;height:calc(var(--u)*.66);background:rgba(244,247,255,.09);border-radius:99px;overflow:hidden;border:.12em solid var(--edge);}
+  #slabar{height:100%;width:100%;background:linear-gradient(90deg,#3ee67a,#8fe635);border-radius:99px;transition:width .3s,background .3s;}
+
+  .playarea{flex:1;width:100%;display:none;min-height:0;}
+  .playarea.on{display:flex;}
+
+  /* Phish */
+  #phishArea{align-items:center;justify-content:center;position:relative;padding:.5vmin calc(var(--u)*.9);max-width:900px;margin:0 auto;min-height:0;}
+  .email{width:100%;max-width:640px;max-height:100%;overflow:auto;background:#fbf6ee;color:#2a2024;border-radius:calc(var(--u)*1.1);
+    padding:calc(var(--u)*1.3);box-shadow:0 .55em 0 rgba(0,0,0,.4);position:relative;animation:dealin .28s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes dealin{from{transform:translateY(2.2em) rotate(1.4deg) scale(.95);opacity:0;}to{transform:none;opacity:1;}}
+  .email.fly-left{animation:flyL .3s ease-in forwards;}.email.fly-right{animation:flyR .3s ease-in forwards;}
+  @keyframes flyL{to{transform:translateX(-120vw) rotate(-16deg);opacity:.5;}}
+  @keyframes flyR{to{transform:translateX(120vw) rotate(16deg);opacity:.5;}}
+  .email.wrongcard{animation:wshake .4s;outline:.22em solid #e2354f;outline-offset:.18em;}
+  @keyframes wshake{0%,100%{transform:none}25%{transform:translateX(-.6em) rotate(-1deg)}50%{transform:translateX(.55em)}75%{transform:translateX(-.3em) rotate(1deg)}}
+  .email .apphdr{display:flex;align-items:center;gap:.5em;padding-bottom:.6em;border-bottom:.14em solid # e9ddcd;border-bottom-color:#e9ddcd;margin-bottom:.7em;color:#a08f80;font-size:calc(var(--u)*.78);letter-spacing:.12em;font-weight:800;}
+  .email .dot{width:.6em;height:.6em;border-radius:99px;background:var(--acc);display:inline-block;}
+  .email .from{font-size:calc(var(--u)*1);color:#4a3c40;margin-bottom:.15em;word-break:break-all;font-weight:800;}
+  .email .from .addr{color:#93807c;font-weight:500;}
+  .email .subj{font-size:calc(var(--u)*1.35);font-weight:800;color:#241a1e;margin:.4em 0 .55em;line-height:1.2;}
+  .email .body{font-size:calc(var(--u)*1.02);line-height:1.5;color:#54464b;font-weight:500;}
+  .email .body a{color:#b3552e;text-decoration:underline;pointer-events:none;word-break:break-all;}
+  .stamp{position:absolute;top:.7em;right:.6em;font-size:calc(var(--u)*1.4);font-weight:800;letter-spacing:.1em;padding:.25em .6em;border:.2em solid;border-radius:.4em;transform:rotate(9deg);opacity:0;}
+  .stamp.show{opacity:.92;animation:stampin .18s cubic-bezier(.2,2,.4,1);}
+  .stamp.p{color:#d5294d;border-color:#d5294d;}.stamp.l{color:#1c9e63;border-color:#1c9e63;}
+  @keyframes stampin{from{transform:rotate(9deg) scale(2.2);opacity:0;}to{transform:rotate(9deg) scale(1);opacity:.92;}}
+  .answers{width:100%;max-width:680px;margin:0 auto;display:flex;gap:calc(var(--u)*.8);padding:calc(var(--u)*.7) calc(var(--u)*1) calc(var(--u)*1);}
+  .ans{flex:1;border:none;cursor:pointer;border-radius:calc(var(--u)*1);padding:calc(var(--u)*1.1) .5em;font-family:inherit;font-size:calc(var(--u)*1.5);
+    font-weight:800;letter-spacing:.08em;color:#fff;display:flex;flex-direction:column;align-items:center;gap:.15em;transition:transform .07s,box-shadow .07s;min-height:3em;}
+  .ans svg{width:calc(var(--u)*1.5);height:calc(var(--u)*1.5);stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;}
+  .ans small{font-size:calc(var(--u)*.68);font-weight:700;letter-spacing:.06em;opacity:.85;}
+  .ans.legit{background:#1fa85e;box-shadow:0 .35em 0 #147040,0 0 1em rgba(31,168,94,.4);}
+  .ans.phish{background:#e2354f;box-shadow:0 .35em 0 #97182f,0 0 1em rgba(226,53,79,.4);}
+  .ans:active{transform:translateY(.3em);box-shadow:0 .05em 0 rgba(0,0,0,.4);}
+
+  /* SOC */
+  #socArea{flex-direction:column;max-width:820px;width:100%;margin:0 auto;padding:.5vmin calc(var(--u)*.8) calc(var(--u)*.8);gap:calc(var(--u)*.6);overflow:hidden;min-height:0;}
+  .alert{background:linear-gradient(180deg,var(--panel2),var(--panel));border:.14em solid var(--edge);border-left:.4em solid;border-radius:calc(var(--u)*1);
+    padding:calc(var(--u)*.75) calc(var(--u)*.9);position:relative;overflow:hidden;box-shadow:0 .3em 0 rgba(0,0,0,.32);animation:pop .26s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes pop{from{transform:translateY(-1em) scale(.96);opacity:0;}to{transform:none;opacity:1;}}
+  .alert.leaving{transition:opacity .18s,transform .18s;opacity:0;transform:translateX(2.6em) rotate(1deg);}
+  .alert .top{display:flex;align-items:center;gap:.5em;margin-bottom:.35em;flex-wrap:wrap;}
+  .sev{font-size:calc(var(--u)*.66);font-weight:800;letter-spacing:.06em;padding:.2em .7em;border-radius:.4em;transform:rotate(-1.5deg);box-shadow:.1em .1em 0 rgba(0,0,0,.35);}
+  .sev.CRITICAL{background:#e2354f;color:#fff;}.sev.HIGH{background:#f97316;color:#fff;}.sev.MEDIUM{background:#ffd23f;color:#3a2a05;}.sev.LOW{background:#38bdf8;color:#082a3a;}
+  .src{font-size:calc(var(--u)*.7);color:var(--sub);letter-spacing:.08em;font-weight:800;}
+  .alert h4{font-size:calc(var(--u)*1.06);color:var(--ink);margin-bottom:.15em;line-height:1.2;font-weight:800;}
+  .alert p{font-size:calc(var(--u)*.82);color:var(--sub);line-height:1.35;margin-bottom:.6em;font-weight:500;}
+  .abtns{display:flex;gap:.6em;}
+  .abtns button{flex:1;border:none;cursor:pointer;border-radius:.6em;padding:.7em .4em;font-family:inherit;font-size:calc(var(--u)*.95);font-weight:800;letter-spacing:.05em;color:#fff;transition:transform .07s,box-shadow .07s;min-height:2.8em;}
+  .b-esc{background:#e2354f;box-shadow:0 .25em 0 #97182f;}
+  .b-dis{background:rgba(244,247,255,.1);border:.14em solid var(--edge)!important;color:var(--sub)!important;box-shadow:0 .25em 0 rgba(0,0,0,.25);}
+  .abtns button:active{transform:translateY(.2em);box-shadow:0 .04em 0 rgba(0,0,0,.3);}
+  .fuse{position:absolute;bottom:0;left:0;height:.28em;background:linear-gradient(90deg,#ffd23f,#e2354f);width:100%;}
+
+  /* Breach */
+  #breachArea{flex-direction:column;max-width:900px;width:100%;margin:0 auto;min-height:0;}
+  .brief{width:100%;text-align:center;padding:.4vmin calc(var(--u)*1);}
+  .brief .mission{font-size:calc(var(--u)*.7);letter-spacing:.2em;color:var(--sub);font-weight:800;}
+  .brief .q{font-size:calc(var(--u)*1.35);font-weight:800;color:var(--ink);margin-top:.2em;line-height:1.2;}
+  .net{flex:1;width:100%;padding:calc(var(--u)*.6) calc(var(--u)*.8) calc(var(--u)*1);display:grid;grid-template-columns:repeat(2,1fr);gap:calc(var(--u)*.8);align-content:center;min-height:0;}
+  @media(min-width:680px) and (min-height:520px){.net{grid-template-columns:repeat(4,1fr);}}
+  .node{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));border:.14em solid var(--edge);border-radius:calc(var(--u)*1);
+    padding:calc(var(--u)*.85) calc(var(--u)*.7);cursor:pointer;overflow:hidden;min-height:calc(var(--u)*6);display:flex;flex-direction:column;gap:.25em;
+    box-shadow:0 .3em 0 rgba(0,0,0,.32);transition:transform .08s,box-shadow .08s;transform:rotate(var(--tl,0deg));animation:npop .22s cubic-bezier(.2,1.5,.4,1);}
+  .node:nth-child(1){--tl:-.7deg;}.node:nth-child(2){--tl:.5deg;}.node:nth-child(3){--tl:-.4deg;}.node:nth-child(4){--tl:.6deg;}
+  @keyframes npop{from{transform:scale(.9);opacity:0;}to{opacity:1;}}
+  .node:active{transform:translateY(.24em) rotate(0deg);box-shadow:0 .05em 0 rgba(0,0,0,.3);}
+  .node .ico{font-size:calc(var(--u)*1.9);}
+  .node .name{font-size:calc(var(--u)*1.02);font-weight:800;color:var(--ink);line-height:1.1;}
+  .node .desc{font-size:calc(var(--u)*.78);color:var(--sub);line-height:1.28;font-weight:500;}
+  .node .tag{position:absolute;top:.5em;right:.5em;font-size:calc(var(--u)*.6);letter-spacing:.06em;padding:.15em .6em;border-radius:99px;background:rgba(244,247,255,.09);color:var(--sub);font-weight:700;}
+  .node.reveal-bad{border-color:#ff5d73;box-shadow:0 0 0 .14em rgba(255,93,115,.5),0 .3em 0 rgba(0,0,0,.3),0 0 1.4em rgba(255,93,115,.5);}
+  .node.dim{opacity:.36;}
+  .node.picked-wrong{border-color:var(--amber);box-shadow:0 0 0 .14em rgba(255,210,63,.6),0 .3em 0 rgba(0,0,0,.3);}
+  .node .pwned{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,93,115,.14);opacity:0;}
+  .node .pwned span{font-size:calc(var(--u)*1.05);font-weight:800;letter-spacing:.14em;color:#ff8098;border:.18em solid #ff8098;border-radius:.4em;padding:.2em .6em;transform:rotate(-10deg);}
+  .node.reveal-bad .pwned{opacity:1;animation:stampin2 .2s cubic-bezier(.2,2,.4,1);}
+  @keyframes stampin2{from{transform:scale(2);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  /* toasts / popups / event banner */
+  #toast{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 1.4vmin);left:50%;transform:translateX(-50%);z-index:44;padding:.7em 1.3em;border-radius:.8em;
+    font-size:calc(var(--u)*.95);font-weight:700;max-width:92vw;text-align:center;opacity:0;transition:opacity .15s;pointer-events:none;line-height:1.35;}
+  #toast.good{background:#123324;border:.14em solid #2e7d52;color:#7ff0a8;}
+  #toast.bad{background:#331520;border:.14em solid #a3374a;color:#ffa3b3;}
+  #toast.show{opacity:1;}
+  .fx-pop{position:fixed;z-index:46;font-weight:800;font-size:calc(var(--u)*2);pointer-events:none;animation:popfloat .8s ease-out forwards;text-shadow:.08em .08em 0 rgba(0,0,0,.4);}
+  @keyframes popfloat{0%{opacity:0;transform:translateY(.2em) scale(.7);}18%{opacity:1;transform:scale(1.15);}100%{opacity:0;transform:translateY(-3.4em) scale(1);}}
+  #eventbn{position:fixed;top:calc(env(safe-area-inset-top) + 6.4vmin);left:50%;transform:translateX(-50%) rotate(-2deg);z-index:48;background:var(--amber);color:#231708;font-weight:800;
+    font-size:calc(var(--u)*1.05);letter-spacing:.05em;padding:.6em 1.4em;border-radius:.7em;box-shadow:.16em .16em 0 rgba(0,0,0,.45);display:none;text-align:center;}
+  #eventbn.on{display:block;animation:bnin .25s cubic-bezier(.2,1.8,.4,1);}
+  @keyframes bnin{from{transform:translateX(-50%) rotate(-2deg) scale(.5);opacity:0;}to{transform:translateX(-50%) rotate(-2deg) scale(1);opacity:1;}}
+
+  /* ---------------- END ---------------- */
+  .endwrap{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.7);text-align:center;max-width:40em;}
+  .rank{font-size:calc(var(--u)*1.9);font-weight:800;color:var(--amber);transform:rotate(-1deg);}
+  .finalscore{font-size:min(24vw,calc(var(--u)*6.2));font-weight:800;line-height:1;color:var(--ink);text-shadow:0 0 .5em color-mix(in srgb,var(--acc) 40%,transparent);}
+  .fslabel{font-size:calc(var(--u)*.8);letter-spacing:.24em;color:var(--sub);font-weight:800;}
+  .quip{color:var(--sub);font-size:calc(var(--u)*1);line-height:1.45;font-weight:500;}
+  .endstats{display:flex;gap:calc(var(--u)*1.3);flex-wrap:wrap;justify-content:center;}
+  .endstats div{text-align:center;color:var(--sub);font-size:calc(var(--u)*.72);letter-spacing:.06em;font-weight:800;}
+  .endstats b{display:block;font-size:calc(var(--u)*1.7);color:var(--ink);}
+  .initials{display:flex;gap:.7em;align-items:center;}
+  .initials input{width:6.5em;text-align:center;font-size:calc(var(--u)*1.8);font-weight:800;letter-spacing:.3em;text-transform:uppercase;font-family:inherit;
+    background:rgba(244,247,255,.08);border:.14em solid var(--acc2);color:var(--ink);border-radius:.5em;padding:.3em;outline:none;user-select:text;-webkit-user-select:text;}
+  .savebtn{border:none;cursor:pointer;background:var(--acc2);color:#052824;font-weight:800;font-size:calc(var(--u)*.95);border-radius:.5em;padding:.75em 1.2em;letter-spacing:.05em;font-family:inherit;box-shadow:0 .25em 0 #178f80;min-height:2.9em;}
+  .savebtn:active{transform:translateY(.2em);box-shadow:0 .04em 0 #178f80;}
+  .endbtns{display:flex;gap:.8em;flex-wrap:wrap;justify-content:center;align-items:center;}
+  .reviewbtn{background:none;border:.14em solid var(--acc2);color:var(--acc2);font-weight:800;font-family:inherit;cursor:pointer;padding:.85em 1.4em;border-radius:.7em;font-size:calc(var(--u)*.98);display:flex;align-items:center;gap:.4em;min-height:2.9em;}
+  .reviewbtn:active{background:rgba(244,247,255,.06);}
+  #board{width:100%;max-width:24em;}
+  #board h3{text-align:center;color:var(--sub);letter-spacing:.24em;font-size:calc(var(--u)*.8);margin-bottom:.5em;font-weight:800;}
+  .brow{display:flex;justify-content:space-between;padding:.5em 1.1em;border-radius:.5em;font-size:calc(var(--u)*1);color:var(--sub);font-weight:600;}
+  .brow:nth-child(odd){background:rgba(244,247,255,.05);}
+  .brow.me{background:color-mix(in srgb,var(--acc2) 16%,transparent);border:.14em solid var(--acc2);color:var(--ink);font-weight:800;}
+
+  /* ---------------- REVIEW ---------------- */
+  .rvwrap{width:100%;max-width:min(760px,94vw);margin:0 auto;padding:calc(var(--u)*4.5) 0 calc(var(--u)*7);display:flex;flex-direction:column;gap:calc(var(--u)*.9);}
+  .rvhead{text-align:center;}
+  .rvhead h2{font-size:calc(var(--u)*1.9);font-weight:800;}
+  .rvhead p{color:var(--sub);font-size:calc(var(--u)*.9);margin-top:.4em;font-weight:600;}
+  .rvlegend{display:flex;gap:.5em;justify-content:center;flex-wrap:wrap;margin-top:.7em;}
+  .lg{font-size:calc(var(--u)*.78);font-weight:800;padding:.4em .9em;border-radius:99px;display:flex;align-items:center;gap:.45em;border:.14em solid;}
+  .lg .sw{width:.7em;height:.7em;border-radius:99px;}
+  .lg.g{border-color:rgba(62,230,122,.45);color:#7ff0a8;}.lg.g .sw{background:var(--good);}
+  .lg.r{border-color:rgba(255,93,115,.45);color:#ffa3b3;}.lg.r .sw{background:var(--bad);}
+  .lg.o{border-color:rgba(255,157,60,.5);color:#ffc48a;}.lg.o .sw{background:var(--miss);}
+  .rvlist{display:flex;flex-direction:column;gap:calc(var(--u)*.7);}
+  .rvitem{background:linear-gradient(180deg,var(--panel2),var(--panel));border:.14em solid var(--edge);border-left:.4em solid;border-radius:calc(var(--u)*.9);padding:calc(var(--u)*.9) calc(var(--u)*1);}
+  .rvitem.right{border-left-color:var(--good);}.rvitem.wrong{border-left-color:var(--bad);}.rvitem.miss{border-left-color:var(--miss);}
+  .rvtop{display:flex;justify-content:space-between;align-items:flex-start;gap:.6em;margin-bottom:.35em;}
+  .rvtop .qn{font-size:calc(var(--u)*1.02);font-weight:800;color:var(--ink);line-height:1.25;}
+  .badge{flex:0 0 auto;font-size:calc(var(--u)*.68);font-weight:800;letter-spacing:.04em;padding:.3em .7em;border-radius:99px;white-space:nowrap;}
+  .badge.right{background:rgba(62,230,122,.16);color:#7ff0a8;border:.12em solid rgba(62,230,122,.5);}
+  .badge.wrong{background:rgba(255,93,115,.16);color:#ffa3b3;border:.12em solid rgba(255,93,115,.5);}
+  .badge.miss{background:rgba(255,157,60,.16);color:#ffc48a;border:.12em solid rgba(255,157,60,.5);}
+  .rvitem .detail{font-size:calc(var(--u)*.82);color:var(--sub);margin-bottom:.5em;font-weight:500;word-break:break-word;line-height:1.35;}
+  .cmp{display:flex;gap:.5em;flex-wrap:wrap;margin-bottom:.5em;}
+  .pill{font-size:calc(var(--u)*.82);font-weight:700;padding:.35em .8em;border-radius:.5em;display:flex;align-items:center;gap:.4em;}
+  .pill .k{opacity:.7;font-weight:600;}
+  .pill.you-bad{background:rgba(255,93,115,.12);color:#ffb0bd;border:.12em solid rgba(255,93,115,.35);}
+  .pill.you-miss{background:rgba(255,157,60,.12);color:#ffc48a;border:.12em solid rgba(255,157,60,.35);}
+  .pill.you-ok{background:rgba(62,230,122,.12);color:#8ff0b3;border:.12em solid rgba(62,230,122,.35);}
+  .pill.corr{background:rgba(62,230,122,.14);color:#8ff0b3;border:.12em solid rgba(62,230,122,.4);}
+  .rvsec{font-size:calc(var(--u)*.88);line-height:1.5;color:var(--sub);font-weight:500;margin-top:.45em;padding-top:.45em;border-top:.1em solid var(--edge);}
+  .rvsec .h{display:block;font-size:calc(var(--u)*.7);letter-spacing:.1em;font-weight:800;margin-bottom:.15em;text-transform:uppercase;}
+  .rvsec.why .h{color:var(--acc2);}
+  .rvsec.act .h{color:var(--amber);}
+  .rvsec b{color:var(--ink);}
+  .rvfoot{position:fixed;bottom:0;left:0;right:0;padding:1.2vmin 2vmin calc(env(safe-area-inset-bottom) + 1.4vmin);display:flex;gap:.8em;justify-content:center;
+    background:linear-gradient(to top,var(--bg) 55%,transparent);z-index:47;}
+
+  /* ---------------- MODAL ---------------- */
+  .modal-bg{position:fixed;inset:0;background:rgba(6,3,12,.8);z-index:80;display:none;align-items:center;justify-content:center;padding:4vmin;backdrop-filter:blur(4px);}
+  .modal-bg.on{display:flex;}
+  .modal{background:linear-gradient(180deg,var(--panel2),var(--panel));border:.16em solid var(--edge);border-radius:calc(var(--u)*1.3);max-width:min(540px,92vw);width:100%;max-height:86vh;overflow-y:auto;padding:calc(var(--u)*1.6);position:relative;animation:mpop .22s ease-out;}
+  @keyframes mpop{from{transform:translateY(1.4em) scale(.96);opacity:0;}to{transform:none;opacity:1;}}
+  .modal .x{position:absolute;top:.7em;right:.7em;width:2.4em;height:2.4em;border-radius:.6em;border:.14em solid var(--edge);background:none;color:var(--sub);font-size:calc(var(--u)*1.1);font-weight:800;cursor:pointer;font-family:inherit;}
+  .modal .mkind{font-size:calc(var(--u)*.72);letter-spacing:.2em;font-weight:800;color:var(--acc);}
+  .modal h2{font-size:calc(var(--u)*1.7);margin:.15em 0 .5em;}
+  .step{display:flex;gap:.8em;margin-bottom:.8em;align-items:flex-start;}
+  .step .n{flex:0 0 2em;height:2em;border-radius:.5em;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--u)*1);color:#12060a;background:var(--acc);transform:rotate(-3deg);box-shadow:.1em .1em 0 rgba(0,0,0,.4);}
+  .step b{color:var(--ink);font-size:calc(var(--u)*1.02);display:block;margin-bottom:.1em;}
+  .step p{color:var(--sub);font-size:calc(var(--u)*.9);line-height:1.4;font-weight:500;}
+  .mtip{margin-top:.6em;background:rgba(255,210,63,.1);border:.12em solid rgba(255,210,63,.35);border-radius:.7em;padding:.7em .9em;font-size:calc(var(--u)*.88);color:#ffe08a;line-height:1.45;}
+  .modal .mgo{display:flex;align-items:center;justify-content:center;width:100%;margin-top:1em;border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:calc(var(--u)*1.2);color:#12060a;padding:.8em;border-radius:.7em;background:var(--acc);box-shadow:0 .28em 0 var(--accdk);}
+  .modal p.mbody{color:var(--sub);font-size:calc(var(--u)*.95);line-height:1.55;font-weight:500;}
+  .modal p.mbody b{color:var(--ink);}
+
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:66;}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}#crt{opacity:.28;}}
+  /* very short landscape phones: tighten */
+  @media(max-height:430px){ :root{--u:clamp(8px,2.3vmin,15px);} .hubwrap{padding-top:calc(var(--u)*3.4);} }
+</style>
+</head>
+<body data-game="hub">
+
+<div id="grain"></div><div id="vig"></div><div id="crt"></div>
+
+<div class="navrow" id="nav">
+  <button class="navchip" onclick="ARCADE.goHub()">◄ ARCADE</button>
+  <div class="navgroup">
+    <button class="navchip" id="musicbtn" onclick="ARCADE.toggleMusic()">♪ Music</button>
+    <button class="navchip" id="mutebtn" onclick="ARCADE.toggleSfx()">🔊 SFX</button>
+  </div>
+</div>
+
+<!-- ============ HUB ============ -->
+<div class="screen on" id="hub">
+  <div class="hubwrap">
+    <div class="marquee">
+      <div class="sticker">DMATICS IT SOLUTIONS · GISEC 2026</div>
+      <h1 class="title flick">THE CYBER <span class="hl neon">ARCADE</span></h1>
+      <p class="tag">Three games. <b>60 seconds</b> each. Earn your rank, top the board,<br>then review every answer to see how the pros play.</p>
+      <div class="insert">▶ INSERT COIN · PICK A GAME ◀</div>
+    </div>
+    <div class="grid">
+      <div class="cab"><div class="glow"></div><span class="num">1</span>
+        <div class="icobox"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 7l8 6 8-6"/><circle cx="18.5" cy="18.5" r="3.2"/><path d="M20.8 20.8l2 2"/></svg></div>
+        <span class="kind">INBOX SHOWDOWN</span><h2>Phish Hunter</h2>
+        <p>Real email… or a really good fake? Read the sender, trust your gut, don't get reeled in.</p>
+        <div class="hiscore"><span class="lbl">HI-SCORE</span><span id="hi-phish">—</span></div>
+        <div class="btnrow"><button class="play" onclick="ARCADE.start('phish')">PLAY</button><button class="how" onclick="ARCADE.how('phish')">?</button></div>
+      </div>
+      <div class="cab"><div class="glow"></div><span class="num">2</span>
+        <div class="icobox"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 6 6v3l1.7 3.4a1 1 0 0 1-.9 1.6H5.2a1 1 0 0 1-.9-1.6L6 12V9a6 6 0 0 1 6-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></div>
+        <span class="kind">SOC SHIFT</span><h2>Alert Rush</h2>
+        <p>Sit in the analyst's chair. Alerts pour in, fuses burn down — ransomware or routine noise?</p>
+        <div class="hiscore"><span class="lbl">HI-SCORE</span><span id="hi-soc">—</span></div>
+        <div class="btnrow"><button class="play" onclick="ARCADE.start('soc')">PLAY</button><button class="how" onclick="ARCADE.how('soc')">?</button></div>
+      </div>
+      <div class="cab"><div class="glow"></div><span class="num">3</span>
+        <div class="icobox"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg></div>
+        <span class="kind">THINK LIKE AN ATTACKER</span><h2>Breach Point</h2>
+        <p>Every network has a weakest link. Find it before our pentesters would.</p>
+        <div class="hiscore"><span class="lbl">HI-SCORE</span><span id="hi-breach">—</span></div>
+        <div class="btnrow"><button class="play" onclick="ARCADE.start('breach')">PLAY</button><button class="how" onclick="ARCADE.how('breach')">?</button></div>
+      </div>
+    </div>
+    <div class="hubfoot">
+      <button class="setupchip" onclick="ARCADE.openSetup()">⚙ Booth setup</button>
+      <span class="foot">DMATICS IT SOLUTIONS LLC · SOC · NOC · PENTESTING</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ START ============ -->
+<div class="screen" id="start">
+  <div class="startwrap">
+    <div class="sticker" id="s-kind"></div>
+    <h1 class="title" id="s-title"></h1>
+    <p class="subtitle" id="s-sub"></p>
+    <div class="rules" id="s-rules"></div>
+    <p class="freshness" id="s-fresh"></p>
+    <button class="bigbtn pulse" onclick="ARCADE.begin()">▶ TAP TO START</button>
+  </div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div class="screen" id="game">
+  <div class="hud">
+    <div class="stat" id="hud-l">SCORE<b id="score">0</b></div>
+    <div id="timerwrap"><div id="timerbar-bg"><div id="timerbar"></div></div><div id="timenum">60.0</div></div>
+    <div class="stat" id="hud-r">STREAK<b id="rstat">×1</b></div>
+  </div>
+  <div id="slawrap"><span>SOC SLA</span><div id="slabg"><div id="slabar"></div></div><span id="slapct">100%</span></div>
+  <div class="playarea" id="phishArea">
+    <div class="email" id="card"></div>
+    <div class="answers">
+      <button class="ans legit" id="btnLegit"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>LEGIT<small>safe to open</small></button>
+      <button class="ans phish" id="btnPhish"><svg viewBox="0 0 24 24"><path d="M12 3L2 20h20L12 3z"/><path d="M12 10v5M12 17.6v.4"/></svg>PHISH<small>report it!</small></button>
+    </div>
+  </div>
+  <div class="playarea" id="socArea"></div>
+  <div class="playarea" id="breachArea">
+    <div class="brief"><div class="mission" id="mission">TARGET 1</div><div class="q" id="question"></div></div>
+    <div class="net" id="net"></div>
+  </div>
+</div>
+<div id="eventbn"></div>
+<div id="toast"></div>
+
+<!-- ============ END ============ -->
+<div class="screen" id="end">
+  <div class="endwrap">
+    <div class="sticker" id="e-kind" style="background:var(--acc2);color:#052824;">TIME'S UP!</div>
+    <div class="fslabel">FINAL SCORE</div>
+    <div class="finalscore" id="finalscore">0</div>
+    <div class="rank" id="rank"></div>
+    <p class="quip" id="quip"></p>
+    <div class="endstats" id="endstats"></div>
+    <div class="initials" id="initialsRow"><input id="initials" maxlength="3" placeholder="AAA" autocomplete="off"><button class="savebtn" onclick="ARCADE.saveScore()">SAVE</button></div>
+    <div class="endbtns">
+      <button class="reviewbtn" onclick="ARCADE.openReview()">📋 REVIEW ANSWERS</button>
+      <button class="bigbtn" onclick="ARCADE.begin()">▶ PLAY AGAIN</button>
+    </div>
+    <div id="board"></div>
+  </div>
+</div>
+
+<!-- ============ REVIEW ============ -->
+<div class="screen" id="review">
+  <div class="rvwrap">
+    <div class="rvhead">
+      <h2 id="rv-title">Your Answers</h2>
+      <p id="rv-summary"></p>
+      <div class="rvlegend">
+        <span class="lg g"><span class="sw"></span>Correct</span>
+        <span class="lg r"><span class="sw"></span>Wrong</span>
+        <span class="lg o"><span class="sw"></span>Missed / no answer</span>
+      </div>
+    </div>
+    <div class="rvlist" id="rvlist"></div>
+  </div>
+  <div class="rvfoot">
+    <button class="btn2" onclick="ARCADE.closeReview()">◄ Score</button>
+    <button class="bigbtn" onclick="ARCADE.begin()">▶ PLAY AGAIN</button>
+  </div>
+</div>
+
+<!-- ============ MODAL (how / setup) ============ -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)ARCADE.closeModal()">
+  <div class="modal" id="modalbox"></div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+const R=a=>a[Math.floor(Math.random()*a.length)];
+const RN=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const $=id=>document.getElementById(id);
+function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ============ AUDIO (SFX + chiptune music) ============ */
+const AUDIO=(()=>{
+ let ctx=null;
+ function ac(){if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ctx&&ctx.state==='suspended')ctx.resume();return ctx;}
+ return{ac};
+})();
+const SFX=(()=>{let muted=false;
+ function tone(f,dur,type='sine',vol=.13,when=0,slide=0){const c=AUDIO.ac();if(!c||muted)return;
+  const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,c.currentTime+when);
+  if(slide)o.frequency.exponentialRampToValueAtTime(slide,c.currentTime+when+dur);
+  g.gain.setValueAtTime(vol,c.currentTime+when);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+when+dur);
+  o.connect(g).connect(c.destination);o.start(c.currentTime+when);o.stop(c.currentTime+when+dur+.05);}
+ return{
+  coin(){tone(988,.08,'square',.12);tone(1319,.16,'square',.12,.08);},
+  tap(){tone(440,.05,'square',.06);},
+  good(){tone(587,.09,'square',.11);tone(880,.13,'square',.11,.07);},
+  great(){[587,740,880,1175].forEach((f,i)=>tone(f,.1,'square',.11,i*.06));},
+  pwn(){tone(880,.06,'square',.1);tone(1245,.15,'square',.1,.06,660);},
+  bad(){tone(196,.3,'sawtooth',.13,0,90);},
+  boom(){tone(90,.5,'sawtooth',.2,0,36);tone(120,.4,'square',.1,0,50);},
+  newalert(){tone(740,.06,'square',.07);tone(988,.07,'square',.07,.07);},
+  tick(){tone(1046,.04,'square',.06);},
+  surge(){[262,392,523].forEach((f,i)=>tone(f,.14,'square',.12,i*.12));},
+  event(){[523,659,784,1046].forEach((f,i)=>tone(f,.12,'square',.1,i*.09));},
+  end(){[392,523,659,784,1046].forEach((f,i)=>tone(f,.2,'triangle',.12,i*.11));},
+  setMuted(m){muted=m;},isMuted:()=>muted};})();
+
+/* chiptune loop sequencer */
+const MUSIC=(()=>{
+ let on=true, cur=null, timer=null, nextT=0, step=0, wantTrack=null;
+ const NT={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,B3:246.94,
+  C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,G5:783.99,A5:880};
+ // each track: bpm, bass steps (per beat), lead steps (16th)
+ const TRACKS={
+  menu:{bpm:110,
+    bass:['A2','A2','E2','E2','F2','F2','C2','G2'].map(n=>n),
+    lead:['A4',0,'C5','E5',0,'C5','A4',0,'G4',0,'B4','D5',0,'B4','G4',0,
+          'F4',0,'A4','C5',0,'A4','F4',0,'G4',0,'B4','E5','D5','B4','G4',0]},
+  phish:{bpm:132,
+    bass:['E2','E2','G2','A2','C3','A2','G2','E2'],
+    lead:['E5','B4','E5','G5','E5','B4','E5',0,'A4','E5','A5','E5','C5','A4','E5',0]},
+  soc:{bpm:140,
+    bass:['A2','A2','A2','G2','F2','F2','E2','E2'],
+    lead:['A4','C5','E5','A5','E5','C5','A4',0,'F4','A4','C5','F5','C5','A4','F4',0]},
+  breach:{bpm:126,
+    bass:['D2','D2','F2','A2','G2','A2','F2','D2'],
+    lead:['D5','A4','D5','F5','A5','F5','D5','A4','C5','G4','C5','E5','G5','E5','C5','G4']}
+ };
+ const F=n=>{if(!n)return 0;const oct=+n.slice(-1),name=n.slice(0,-1);
+   const semis={C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+   return 440*Math.pow(2,(semis[name]+ (oct-4)*12 -9)/12);};
+ function note(f,dur,type,vol){const c=AUDIO.ac();if(!c)return;const o=c.createOscillator(),g=c.createGain();
+   o.type=type;o.frequency.value=f;const t=c.currentTime;
+   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+   o.connect(g).connect(c.destination);o.start(t);o.stop(t+dur+.03);}
+ function tickLoop(){
+   if(!on||!cur){return;}
+   const t=TRACKS[cur];const spb=60/t.bpm;const sixteenth=spb/4;
+   const lead=t.lead[step%t.lead.length];
+   if(lead)note(F(lead),sixteenth*1.4,'square',.045);
+   if(step%2===0){const b=t.bass[(Math.floor(step/2))%t.bass.length];if(b)note(F(b),spb*.5,'triangle',.06);}
+   step++;
+   timer=setTimeout(tickLoop,sixteenth*1000);
+ }
+ function play(track){
+   wantTrack=track;
+   if(!on){cur=null;if(timer){clearTimeout(timer);timer=null;}return;}
+   const c=AUDIO.ac();if(!c)return; // needs gesture
+   if(cur===track && timer)return;
+   if(timer){clearTimeout(timer);timer=null;}
+   cur=track;step=0;tickLoop();
+ }
+ function stop(){cur=null;if(timer){clearTimeout(timer);timer=null;}}
+ function setOn(v){on=v;if(!on){stop();}else if(wantTrack){play(wantTrack);}}
+ return{play,stop,setOn,isOn:()=>on,resume(){if(on&&wantTrack&&!timer)play(wantTrack);}};
+})();
+
+/* ============ confetti / fx ============ */
+function confettiBurst(colors){const cv=$('confetti'),ctx=cv.getContext('2d');cv.width=innerWidth;cv.height=innerHeight;
+ const ps=Array.from({length:140},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.4,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,s:5+Math.random()*8,c:R(colors),r:Math.random()*6.3,vr:(Math.random()-.5)*.3}));
+ const t0=Date.now();(function f(){ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();});if(Date.now()-t0<2600)requestAnimationFrame(f);else ctx.clearRect(0,0,cv.width,cv.height);})();}
+function popPts(txt,color){const p=document.createElement('div');p.className='fx-pop';p.textContent=txt;p.style.color=color;p.style.left=(innerWidth/2+RN(-70,70))+'px';p.style.top=(innerHeight*0.42)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),850);}
+let toastTimer=null;function toast(kind,msg){const t=$('toast');t.className=kind+' show';t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),kind==='bad'?1500:820);}
+
+/* ============================================================
+   DATA — every generated item now carries:
+   clue  = WHY (the tell / the reasoning)
+   act   = WHAT TO DO (concrete action / remediation)
+============================================================ */
+/* ---------- PHISH ---------- */
+const BRANDS=[{n:'Microsoft',d:'microsoft.com'},{n:'Apple',d:'apple.com'},{n:'Google',d:'google.com'},{n:'Netflix',d:'netflix.com'},{n:'Spotify',d:'spotify.com'},{n:'Amazon',d:'amazon.ae'},{n:'DHL Express',d:'dhl.com'},{n:'Aramex',d:'aramex.com'},{n:'FedEx',d:'fedex.com'},{n:'LinkedIn',d:'linkedin.com'},{n:'Instagram',d:'instagram.com'},{n:'WhatsApp',d:'whatsapp.com'},{n:'Zoom',d:'zoom.us'},{n:'Slack',d:'slack.com'},{n:'GitHub',d:'github.com'},{n:'Adobe',d:'adobe.com'},{n:'Emirates NBD',d:'emiratesnbd.com'},{n:'ADCB',d:'adcb.com'},{n:'Mashreq',d:'mashreq.com'},{n:'Etisalat',d:'etisalat.ae'},{n:'du',d:'du.ae'},{n:'Salik',d:'salik.ae'},{n:'RTA Dubai',d:'rta.ae'},{n:'Emirates',d:'emirates.com'},{n:'Careem',d:'careem.com'},{n:'Talabat',d:'talabat.com'},{n:'Noon',d:'noon.com'},{n:'Dropbox',d:'dropbox.com'}];
+const NAMES=['Ahmed','Sara','Omar','Fatima','Layla','Yousef','Mariam','Khalid','Priya','Wei','David','Elena','John','Aisha','Tariq','Noor','Hassan','Dina','Ravi','Lucia','Zainab','Marco','Huda','Sam'];
+const EXECS=['Ahmed (CEO)','Sarah (CFO)','Mr. Al Rashid (Chairman)','Dana (Managing Director)','Omar (VP Finance)'];
+const JUICY=['Q4_Salaries_FINAL.xlsx','Layoff_List_CONFIDENTIAL.docx','Bonus_Payouts_2026.xlsx','Board_Minutes_PRIVATE.pdf','Merger_Draft_v3.docx'];
+function fakeDomain(d){const base=d.split('.')[0],tld=d.slice(d.indexOf('.'));const t=[];
+ if(base.includes('m'))t.push(()=>base.replace('m','rn')+tld);if(base.includes('o'))t.push(()=>base.replace('o','0')+tld);
+ if(base.includes('l'))t.push(()=>base.replace('l','1')+tld);if(base.includes('i'))t.push(()=>base.replace('i','l')+tld);
+ if(base.length>4)t.push(()=>{const i=RN(1,base.length-3);return base.slice(0,i)+base[i+1]+base[i]+base.slice(i+2)+tld;});
+ t.push(()=>base+'-'+R(['secure','verify','alerts','billing','support','update'])+tld);
+ t.push(()=>base+R(['.info','.xyz','.cc','.co','.online','.top']));
+ t.push(()=>d+'.'+R(['session','account','id'])+'-'+R(['verify','check','confirm'])+'.info');
+ t.push(()=>'mail-'+base+R(['.net','.info','.cc']));return R(t)();}
+const ACT_REPORT='Don\'t click. Use the "Report Phishing" button (or forward to your SOC/IT), then delete. If you need the account, type the real address in your browser yourself.';
+const ACT_LEGIT='Safe to act on normally. Good habit even here: reach the site by typing its address or opening its app rather than clicking email links.';
+const PHISH_T=[
+ b=>{const h=R([12,24,48]),fd=fakeDomain(b.d);return{from:b.n+' Security',addr:'security@'+fd,subj:'Unusual sign-in activity detected',body:'We blocked a sign-in from '+R(['Moscow','Lagos','Pyongyang','an unrecognized device','Minsk'])+'. Verify your identity within '+h+' hours or your account will be permanently locked. <a>'+fd+'/verify</a>',clue:'Sender is '+fd+', not '+b.d+'. Fear + a countdown is the classic phishing pressure combo.',act:ACT_REPORT,easy:true};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Billing',addr:'billing@'+fd,subj:'Payment declined — update your card',body:'Your last payment failed and your account is on hold. Update your payment details within '+R([24,48])+' hours to avoid cancellation: <a>'+fd+'/billing</a>',clue:'Billing panic from '+fd+' — the real domain is '+b.d+'. Attackers love "update your card" pages.',act:ACT_REPORT,easy:true};},
+ b=>{const a=(RN(1,9)+'.99'),fd=fakeDomain(b.d);return{from:b.n,addr:'tracking@'+fd,subj:'Your parcel is on hold at customs',body:'A customs fee of AED '+a+' is required to release your package. Pay now to avoid return to sender: <a>'+fd+'/pay</a>',clue:'Couriers don\'t collect tiny fees via a random link, and '+fd+' isn\'t '+b.d+'.',act:'Don\'t pay. Track parcels only in the courier\'s official app/site. Report and delete.'};},
+ b=>{const a=RN(80,400),fd=fakeDomain(b.d);return{from:b.n+' Refunds',addr:'refunds@'+fd,subj:'You are owed a refund of AED '+a,body:'Our system overcharged you last month. Enter your card details to claim your AED '+a+' refund: <a>'+fd+'/claim</a>',clue:'Refunds never require your full card number. Domain check: '+fd+' ≠ '+b.d+'.',act:'Never enter card details from an email link. Check refunds inside your real account. Report it.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Rewards',addr:'offers@'+fd,subj:'You\'ve won '+R(['12 months free','a AED 500 voucher','an exclusive upgrade'])+'!',body:'Congratulations! You were randomly selected. Claim within '+R([12,24])+' hours before it expires: <a>'+fd+'/claim</a>',clue:'Too good to be true + a countdown + a lookalike domain = bait.',act:'Delete it. If a brand really runs a promo, it\'s on their official site — go check there, not via the link.',easy:true};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Team',addr:'no-reply@'+fd,subj:'Your password expires TODAY',body:'Action required: your password expires in a few hours. Keep your current password by re-entering it here: <a>'+fd+'/keep-password</a>',clue:'"Re-enter your password to keep it" is a credential harvest, every time.',act:'Change passwords only from the app/site you typed yourself. Report this, and if you clicked, reset that password now + enable MFA.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Support',addr:'support@'+fd,subj:'Account scheduled for deletion',body:'Due to suspicious activity, your account will be deleted in '+R([12,24,48])+' hours. Cancel the deletion here: <a>'+fd+'/cancel-deletion</a>',clue:'Deletion threats with a countdown are pure pressure. Domain: '+fd+'.',act:'Ignore the link. Log in the normal way to check your account status. Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Trust & Safety',addr:'violations@'+fd,subj:'Policy violation — final warning',body:'Your account was reported for violating our terms. Submit an appeal within 24 hours or lose access permanently: <a>'+fd+'/appeal</a>',clue:'Fake "violation appeals" harvest logins. The domain gives it away: '+fd+'.',act:'Appeals happen inside the real platform, never via an emailed link. Report and delete.'};},
+ b=>{const a=RN(299,4999),fd=fakeDomain(b.d);return{from:b.n,addr:'receipts@'+fd,subj:'Receipt: AED '+a+' — thank you for your purchase',body:'Your order will be processed today. If you did not make this purchase, cancel immediately: <a>'+fd+'/cancel?order='+RN(10000,99999)+'</a>',clue:'A scary fake receipt baits you into "cancelling" on a phishing page. Sender: '+fd+'.',act:'Check real orders in the official app. Don\'t click "cancel". Report and delete.'};},
+ b=>{const fd=fakeDomain(b.d);return{from:b.n+' Verification',addr:'verify@'+fd,subj:'Confirm the code we just sent you',body:'For your security, reply with the 6-digit code we just texted you to keep your account active. This is a routine check.',clue:'A one-time code is a key to your account. No real company asks you to share it.',act:'Never share an OTP with anyone, by email, call or chat. If you shared one, reset the account and enable MFA immediately.'};}];
+const GEN_PHISH=[
+ ()=>{const e=R(EXECS),n=RN(3,8);return{from:e.split(' ')[0]+' — '+e.match(/\((.*)\)/)[1],addr:R(['ceo.office','exec.desk','md.office'])+RN(1,99)+'@gmail.com',subj:R(['Are you at your desk?','Quick favor — urgent','Need this handled quietly']),body:'I\'m heading into a meeting and need something handled discreetly. Buy '+n+' Apple gift cards ('+R(['AED 500','AED 1000'])+' each) for client gifts and send me the codes. Keep this between us for now.',clue:'An "executive" on a Gmail address asking for gift-card codes = textbook CEO/BEC fraud.',act:'Verify out-of-band: call the real person on a known number before acting. Never buy gift cards on an email request. Report to Finance + SOC.',easy:true};},
+ ()=>{const fd='hr-'+R(['portal','payroll','benefits'])+R(['.net','.info','.cc']);return{from:'HR Department',addr:'hr@'+fd,subj:'URGENT: '+R(['Salary adjustment','Bonus payout','Contract renewal'])+' — action required',body:'Your '+R(['December','annual','quarterly'])+' payment revision is pending. Log in NOW to confirm your bank details or payment will be delayed: <a>'+fd+'/login</a>',clue:'HR on an external domain asking you to "confirm bank details" is a payroll-diversion scam.',act:'Never change payroll/bank details via an email link. Confirm with HR in person or on a known number. Report it.'};},
+ ()=>{const fd='yourc0mpany'+R(['.com','.net']);return{from:'IT Security',addr:'it-security@'+fd,subj:'Mandatory password reset TODAY',body:'Due to a security incident, all staff must reset passwords immediately: <a>'+fd+'/reset</a>. Non-compliance will result in account suspension.',clue:'A zero replaces the "o" — attackers impersonate YOUR OWN company\'s domain.',act:'Reset passwords only via your company\'s known internal portal. Report to the real IT/SOC; if you clicked, reset + tell them at once.'};},
+ ()=>{const s=RN(20,58),fd='voip-'+R(['messages','mailbox','audio'])+'-center.com';return{from:'Voicemail Service',addr:'vm-notify@'+fd,subj:'New voicemail (0:'+s+') — listen now',body:'You received a new voicemail from +971-'+RN(2,4)+'-XXX-XX'+RN(10,99)+'. Listen here: <a>'+fd+'/play?msg='+RN(1000,9999)+'</a>',clue:'Fake voicemail links are a top malware-delivery trick.',act:'Check voicemail through your actual phone system, not an email link. Report and delete.'};},
+ ()=>{const f=R(JUICY),fd='clouddocs-'+R(['share','files','sync'])+'.net';return{from:'CloudDocs',addr:'share@'+fd,subj:'"'+f+'" was shared with you',body:'A confidential document has been shared with you by a colleague. Sign in with your email password to view: <a>'+fd+'/view</a>',clue:'A juicy filename + "sign in with your EMAIL password" on a third-party site = credential theft.',act:'Real doc-shares never ask for your email password on another domain. Report it; reset your password if you entered it.'};},
+ ()=>{const a=RN(150,300),fd='quick-'+R(['hire','jobs','talent'])+'-network.org';return{from:'Talent Acquisition',addr:'careers@'+fd,subj:'Job offer — AED '+RN(18,35)+',000/month, no interview needed',body:'Your profile impressed our client! To reserve your position, pay a refundable AED '+a+' registration fee: <a>'+fd+'/register</a>',clue:'Legitimate employers never charge you to be hired.',act:'Don\'t pay anything. Verify the company independently. Report the scam and delete.',easy:true};},
+ ()=>{const fd='office-'+R(['facilities','parking','building'])+'-mgmt.com';return{from:'Facilities Team',addr:'parking@'+fd,subj:'Your car will be towed within 1 hour',body:'Your vehicle is parked in a reserved zone. Pay the AED '+RN(50,200)+' release fee immediately to avoid towing: <a>'+fd+'/pay</a>',clue:'Panic + a payment link from a random external domain. Real facilities would just call.',act:'Don\'t pay online. Confirm with building management directly. Report and delete.'};},
+ ()=>{const n=R(NAMES);return{from:n+' (new number)',addr:'sms-gateway@textforward'+R(['.cc','.info']),subj:'Fwd: it\'s me — new phone',body:'"Hi, it\'s me. I dropped my phone in water, this is my new number. I need you to transfer AED '+RN(500,3000)+' urgently, I\'ll explain later."',clue:'The "new number + urgent money" impersonation scam.',act:'Call the person on their OLD number to verify before sending anything. Never transfer money on an unverified message.'};},
+ ()=>{const fd='wifi-'+R(['dwtc','expo','event'])+'-login.com';return{from:'Venue WiFi',addr:'access@'+fd,subj:'Re-authenticate to keep your WiFi session',body:'Your conference WiFi session expired. Re-enter your email and password to reconnect: <a>'+fd+'/auth</a>',clue:'Event WiFi never needs your EMAIL password — a very on-theme trap for GISEC.',act:'Never give email credentials to a WiFi portal. Reconnect via the official captive page only. Report it.'};},
+ ()=>{return{from:'Crypto Rewards',addr:'airdrop@'+R(['btc','eth','coin'])+'-'+R(['giveaway','bonus'])+'.io',subj:'Your wallet qualifies for a '+RN(2,10)+'x airdrop',body:'Connect your wallet and approve the transaction to receive your bonus tokens instantly. Limited to the first '+RN(100,500)+' users!',clue:'"Connect wallet and approve" drains the wallet. There are no free multiplier airdrops.',act:'Never connect/approve from an unsolicited link. Revoke approvals if you did, and move funds to a fresh wallet.',easy:true};}];
+const LEGIT_T=[
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Your order has shipped',body:'Your order #'+RN(100,999)+'-'+RN(1000,9999)+' has shipped and will arrive '+R(['tomorrow','within 2 days'])+'. Track it in Your Orders in the app.',clue:'Real domain ('+b.d+'), points you to the app, asks for nothing.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'account-security-noreply@'+b.d,subj:'New sign-in on '+R(['Windows','iPhone','Android','Mac']),body:'Your account was signed in on a new device. If this was you, no action is needed. Review activity any time in your account settings.',clue:'Genuine '+b.d+', and crucially it says "no action needed" — no link demanding credentials.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Your verification code',body:'Your one-time code is '+RN(100,999)+' '+RN(100,999)+'. It expires in 10 minutes. We will never ask you to share this code with anyone.',clue:'A code you requested, from the real domain, with a "never share" warning.',act:'Use the code yourself in the app you were logging into. Never forward it to anyone.'}),
+ b=>({from:b.n,addr:'receipts@'+b.d,subj:'Payment received — thank you',body:'We\'ve received your payment of AED '+RN(19,199)+'.00 for your subscription. No further action is required. Manage your plan in account settings.',clue:'Real domain, states a fact, requests nothing.',act:ACT_LEGIT}),
+ b=>({from:b.n,addr:'news@'+b.d,subj:R(['Your weekly digest','What\'s new this month','Product updates']),body:'Here\'s what\'s new: '+RN(2,8)+' features shipped, plus tips from the community. Read at your leisure — or unsubscribe below.',clue:'Newsletter from the authentic domain. Boring is usually safe.',act:'Safe to read. If you don\'t want it, use the real unsubscribe link at the bottom.'}),
+ b=>({from:b.n,addr:'no-reply@'+b.d,subj:'Reminder: your '+R(['subscription','membership'])+' renews on the '+RN(1,28)+'th',body:'Your plan renews automatically. No action is needed. To make changes, visit your account settings in the app.',clue:'Renewal notice with no link demanding your card = normal.',act:ACT_LEGIT})];
+const GEN_LEGIT=[
+ ()=>({from:'IT Helpdesk',addr:'helpdesk@yourcompany.com',subj:'Scheduled maintenance '+R(['Saturday','Sunday'])+' 2AM–4AM',body:'Email services will be briefly unavailable during scheduled maintenance this weekend. No action is required.',clue:'Internal domain, informational, asks for nothing.',act:ACT_LEGIT}),
+ ()=>{const n=R(NAMES);return{from:n+' ('+R(['Finance','HR','Ops'])+')',addr:n.toLowerCase()+'@yourcompany.com',subj:R(['All-hands moved to 3PM','Team lunch Thursday','Office closed for public holiday']),body:R(['Quick heads up — today\'s all-hands is moved to 3PM, same room.','We\'re doing team lunch Thursday 12:30 at the usual place. RSVP by tomorrow!','Reminder: office closed Monday for the public holiday. Enjoy the long weekend!']),clue:'Internal address, everyday content, nothing sensitive requested.',act:ACT_LEGIT};},
+ ()=>({from:'Finance Team',addr:'finance@yourcompany.com',subj:'Expense report EXP-'+RN(1000,9999)+' approved',body:'Your expense report (AED '+RN(80,900)+'.00) has been approved and will be reimbursed with your next salary.',clue:'Internal, no links, no data requested.',act:ACT_LEGIT}),
+ ()=>{const n=R(NAMES);return{from:'Zoom',addr:'no-reply@zoom.us',subj:'Reminder: "'+R(['Vendor sync','Sprint review','1:1 with '+n])+'" starts in 30 minutes',body:'Your scheduled meeting begins at '+RN(9,16)+':00. Meeting ID: '+RN(800,999)+' '+RN(1000,9999)+' '+RN(1000,9999)+'.',clue:'zoom.us is Zoom\'s real domain; a simple calendar reminder.',act:ACT_LEGIT};},
+ ()=>({from:'GitHub',addr:'noreply@github.com',subj:'[repo] Pull request #'+RN(50,600)+' merged',body:'Your pull request "'+R(['Fix login validation','Update dependencies','Refactor auth module'])+'" was merged into main by your teammate.',clue:'Routine developer notification from the real github.com.',act:ACT_LEGIT}),
+ ()=>({from:'Emirates',addr:'no-reply@emirates.com',subj:'Check in now for flight EK'+RN(100,999),body:'Online check-in is open for your flight. Check in via the Emirates app or emirates.com.',clue:'Genuine domain, directs you to the official app/site.',act:ACT_LEGIT}),
+ ()=>({from:'Careem',addr:'receipts@careem.com',subj:'Your trip receipt — AED '+RN(15,80)+'.'+RN(10,99),body:'Thanks for riding! Trip from '+R(['Media City','Marina','Deira','JLT'])+' to '+R(['DWTC','Downtown','Airport'])+'. Total charged to your saved card.',clue:'Real careem.com receipt, informational only.',act:ACT_LEGIT})];
+function phishPool(){return BRANDS.length*PHISH_T.length*5+GEN_PHISH.length*20+BRANDS.length*LEGIT_T.length+GEN_LEGIT.length*15;}
+const phUsed=new Set();
+function genEmail(cardNo){for(let tr=0;tr<30;tr++){const wantPhish=Math.random()<0.54;let e,key;
+  if(wantPhish){if(Math.random()<0.72){const b=R(BRANDS),ti=RN(0,PHISH_T.length-1);e=PHISH_T[ti](b);key='bp'+ti+b.n;}else{const ti=RN(0,GEN_PHISH.length-1);e=GEN_PHISH[ti]();key='gp'+ti;}e.phish=true;}
+  else{if(Math.random()<0.6){const b=R(BRANDS),ti=RN(0,LEGIT_T.length-1);e=LEGIT_T[ti](b);key='bl'+ti+b.n;}else{const ti=RN(0,GEN_LEGIT.length-1);e=GEN_LEGIT[ti]();key='gl'+ti;}e.phish=false;}
+  if(cardNo<4&&e.phish&&!e.easy)continue;if(!phUsed.has(key)){phUsed.add(key);if(phUsed.size>60)phUsed.clear();return e;}}
+ const b=R(BRANDS);const e=PHISH_T[0](b);e.phish=true;return e;}
+
+/* ---------- SOC ---------- */
+const DEPT=['FIN','HR','DEV','OPS','MKT','EXEC','SALES','LEGAL'],HTYPE=['SRV','WKS','DB','WEB','APP'];
+const host=()=>R(DEPT)+'-'+R(HTYPE)+'-'+String(RN(1,29)).padStart(2,'0');
+const UNAMES=['ahmed.k','sara.m','omar.d','fatima.a','j.smith','priya.r','wei.l','layla.h','d.jones','tariq.b','noor.s','hassan.f','elena.v','ravi.p','lucia.g','zainab.q'];
+const user=()=>R(UNAMES),extIP=()=>R(['185','45','103','91','194','23'])+'.'+RN(10,250)+'.'+RN(1,250)+'.'+RN(2,250);
+const FAR=['Kyiv','Lagos','São Paulo','Pyongyang','Minsk','Caracas','Tirana'],CLOUD=['mega.nz','anonfiles.io','file.io','dropmb.com'];
+const nightTime=()=>RN(1,4)+':'+String(RN(10,59)).padStart(2,'0')+' AM';
+const THREATS=[
+ ()=>{const h=host();return{sev:'CRITICAL',src:'EDR',t:'Ransomware behavior on '+h,d:'mass file encryption + shadow copy deletion (vssadmin) on '+h,clue:'Encryption + shadow-copy deletion is ransomware detonating right now.',act:'Escalate P1. Isolate '+h+' from the network immediately, preserve it for forensics, and trigger the ransomware IR playbook.'};},
+ ()=>{const a='svc_'+R(['backup','sync','update'])+RN(2,9);return{sev:'CRITICAL',src:'SIEM',t:'Domain admin added at '+nightTime(),d:'new account "'+a+'" added to Domain Admins outside any change window',clue:'Unplanned domain-admin creation at night is attacker persistence.',act:'Escalate. Disable "'+a+'", review who created it, check for other new admins, and hunt for how they got Domain Admin.'};},
+ ()=>{const h=host(),ip=extIP();return{sev:'HIGH',src:'IDS',t:'Outbound beaconing from '+h,d:h+' calling '+ip+' every '+R([30,60,90])+'s with identical '+RN(1,9)+'KB payloads',clue:'Metronome-regular callbacks to a strange IP = command & control.',act:'Escalate. Block '+ip+' at the firewall, isolate '+h+', and analyze the process making the beacon.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'Encoded PowerShell on '+h,d:'powershell -enc JABjAGwAaQ... spawned by WINWORD.EXE ('+user()+')',clue:'Word spawning encoded PowerShell = a malicious macro executing.',act:'Escalate. Isolate '+h+', kill the process tree, decode the command to see intent, and reset '+user()+'\'s credentials.'};},
+ ()=>{const u=user(),g=RN(20,60);return{sev:'CRITICAL',src:'DLP',t:g+'GB upload to personal cloud',d:u+"'s workstation uploading archives to "+R(CLOUD)+' at '+nightTime(),clue:'A huge overnight upload to personal cloud is likely data exfiltration.',act:'Escalate. Block the destination, suspend '+u+'\'s sessions, and determine what data left. Loop in Legal/DPO if sensitive.'};},
+ ()=>{const u=user(),c=R(FAR);return{sev:'HIGH',src:'SIEM',t:'Impossible travel: '+u,d:'same account: Dubai '+RN(8,11)+':0'+RN(1,9)+', then '+c+' '+RN(8,11)+':'+RN(30,55)+' — both successful',clue:'Nobody flies Dubai→'+c+' in minutes — the credentials are compromised.',act:'Escalate. Force-logout and reset '+u+', revoke tokens, enable/verify MFA, and review what that session accessed.'};},
+ ()=>{const h='DC-0'+RN(1,3);return{sev:'CRITICAL',src:'EDR',t:'LSASS memory dump on '+h,d:R(['procdump.exe','rundll32 comsvcs'])+' targeting lsass.exe by non-admin '+user(),clue:'Dumping LSASS is credential theft (Mimikatz-style) on a domain controller.',act:'Escalate P1. Isolate '+h+', treat all DC credentials as exposed, rotate them (incl. krbtgt twice), and hunt lateral movement.'};},
+ ()=>{const n=RN(40,90),u=RN(3,9);return{sev:'CRITICAL',src:'Email GW',t:'Live phishing campaign — '+u+' clicks',d:n+' users received "password expiry" mail; '+u+' already clicked the link',clue:'An active campaign with real clicks means accounts may already be compromised.',act:'Escalate. Pull the mail from all inboxes, block the domain, and force password reset + MFA on the '+u+' who clicked.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'EDR',t:'Fake-name persistence on '+h,d:'"'+R(['GoogleUpdatesvc','AdobeSync','OneDriveHelper'])+'" task runs C:\\Users\\Public\\'+R(['svchost','csrss','winlogon'])+'.exe',clue:'System binaries never live in Users\\Public — this is disguised persistence.',act:'Escalate. Isolate '+h+', remove the scheduled task, grab the binary for analysis, and scan the fleet for the same task name.'};},
+ ()=>{const h='JUMP-0'+RN(1,3),n=RN(1200,4800);return{sev:'HIGH',src:'IDS',t:'RDP brute force on '+h,d:n+' attempts from '+RN(20,80)+'+ IPs against exposed RDP',clue:'Distributed brute force against internet-facing RDP is a top ransomware entry.',act:'Escalate. Get RDP off the internet (VPN + MFA), block the source IPs, and check for any successful logon on '+h+'.'};},
+ ()=>{const d=R(['updates-cdn','metrics-sync','api-relay'])+RN(2,9)+'.com';return{sev:'MEDIUM',src:'Proxy',t:'DNS tunneling suspected',d:RN(3,9)+',000 TXT queries/hour to random subdomains of '+d,clue:'Thousands of TXT queries to one domain is data sneaking out over DNS.',act:'Escalate. Sinkhole/block '+d+', identify the source host, and inspect it for malware doing the tunneling.'};},
+ ()=>{const h=R(DEPT)+'-WEB-0'+RN(1,9);return{sev:'HIGH',src:'WAF',t:'SQL injection burst on '+h,d:"payloads ' OR 1=1-- hitting /login at "+RN(80,400)+' req/min from '+extIP(),clue:'High-rate SQLi probing is an active attempt to breach the app/database.',act:'Escalate. Block the source IP, put the WAF rule in blocking mode, and have devs check the endpoint for a successful injection.'};},
+ ()=>{return{sev:'CRITICAL',src:'OT/ICS',t:'Unauthorized PLC write',d:'office-network laptop ('+user()+') sent write command to factory PLC-'+RN(1,9),clue:'An office laptop writing to an industrial controller is never normal and can be dangerous.',act:'Escalate P1 to OT security. Isolate the IT/OT path, verify PLC integrity with engineering, and treat safety as the priority.'};},
+ ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Off-hours mailbox rule created',d:'new rule on '+u+"'s mailbox auto-forwards finance mail to external gmail",clue:'Auto-forward-to-external rules are a hallmark of Business Email Compromise.',act:'Escalate. Remove the rule, reset '+u+' + revoke tokens, enable MFA, and check for fraudulent invoices/payments.'};},
+ ()=>{const h=host();return{sev:'HIGH',src:'AV',t:'Defender disabled on '+h,d:'real-time protection turned off via registry, no ticket, user '+user(),clue:'Attackers disable AV right before the real payload runs.',act:'Escalate. Re-enable protection via policy, isolate '+h+', and hunt for what ran while protection was off.'};}];
+const FPS=[
+ ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Failed logins — '+u+' locked out',d:RN(5,12)+' failed attempts right after quarterly password-reset day',clue:'Failed logins immediately after reset day are almost always the user mistyping a new password.',act:'Dismiss (low priority). If it repeats, confirm with the user and help them reset — no incident needed.'};},
+ ()=>{return{sev:'LOW',src:'AV',t:'Adware quarantined',d:'PUP.BrowserToolbar removed from a guest laptop, no further activity',clue:'It\'s already quarantined and low-impact — routine cleanup, not an incident.',act:'Dismiss. The control worked as intended; note it and move on.'};},
+ ()=>{const n=RN(200,600);return{sev:'MEDIUM',src:'Proxy',t:'Traffic spike to windowsupdate.com',d:n+' endpoints pulling from the official Microsoft CDN after Patch Tuesday',clue:'Patch Tuesday traffic to an official CDN is expected, healthy noise.',act:'Dismiss. Optionally tune the rule so expected update traffic doesn\'t alert next month.'};},
+ ()=>{const u=R(['CFO','CTO','HR head','Legal counsel']);return{sev:'LOW',src:'SIEM',t:'VPN login from new device',d:u+' connected from a new '+R(['iPad','MacBook','phone'])+' — MFA passed, geo matches home',clue:'MFA passed and the location matches — a normal new-device login.',act:'Dismiss. If you want certainty, a quick confirmation with the user closes it.'};},
+ ()=>{return{sev:'MEDIUM',src:'AV',t:'EICAR test file detected',d:'flagged in \\\\soc\\testing\\ during scheduled AV validation',clue:'EICAR is the harmless industry AV-test file — someone is validating the AV.',act:'Dismiss. Confirm it\'s the scheduled test; no threat.'};},
+ ()=>{const h=host();return{sev:'MEDIUM',src:'Vuln Scanner',t:'Port scan from 10.0.'+RN(1,9)+'.'+RN(2,30),d:'internal scanner sweeping '+h+' subnet on its weekly schedule',clue:'The source is your own authorized scanner, running on schedule.',act:'Dismiss. Add the scanner to an allowlist so it stops generating noise.'};},
+ ()=>{const h=host(),c='CHG-'+RN(1000,9999);return{sev:'LOW',src:'SIEM',t:h+' rebooted at '+RN(21,23)+':'+RN(10,55),d:'matches approved change ticket '+c+' (maintenance window)',clue:'It maps to an approved change ticket — expected maintenance.',act:'Dismiss. Cross-reference '+c+' and close.'};},
+ ()=>{return{sev:'LOW',src:'Email GW',t:'Bulk marketing mail flagged',d:'newsletter from '+R(['adobe.com','linkedin.com','atlassian.com'])+' to '+RN(150,400)+' staff — SPF/DKIM pass',clue:'Authenticated marketing mail belongs in spam handling, not the IR queue.',act:'Dismiss. Tune the filter; not a security incident.'};},
+ ()=>{const u=user();return{sev:'MEDIUM',src:'SIEM',t:'Admin '+u+' logged in as root',d:'su to root on the backup server during its backup maintenance window',clue:'Right admin, right server, right window — business as usual.',act:'Dismiss after a quick check that it matches the maintenance schedule.'};},
+ ()=>{return{sev:'LOW',src:'AV',t:'Signature update completed',d:'endpoint protection definitions updated fleet-wide, 0 failures',clue:'That\'s a status message, not an alert.',act:'Dismiss. Consider suppressing informational events from the queue.'};},
+ ()=>{const u=user();return{sev:'LOW',src:'Email GW',t:u+' reported a newsletter',d:'employee flagged the legitimate HR newsletter as phishing',clue:'Good instinct, wrong target — it\'s verified legitimate.',act:'Dismiss, and thank the user for reporting — that behavior is exactly what you want.'};},
+ ()=>{const h=host();return{sev:'MEDIUM',src:'EDR',t:'PsExec run on '+h,d:'launched by IT admin '+user()+' with a linked support ticket INC-'+RN(1000,9999),clue:'An admin tool + valid ticket + known admin = legitimate IT work.',act:'Dismiss after confirming the ticket. Optionally allowlist admin tooling on jump hosts.'};},
+ ()=>{const n=RN(30,90);return{sev:'LOW',src:'Backup',t:'Backup window overrun',d:'nightly backup ran '+n+' min long due to data growth; completed OK',clue:'A slow-but-successful backup is an ops capacity issue, not security.',act:'Dismiss. Hand to the ops/backup team to review scheduling.'};}];
+function socPool(){return (THREATS.length+FPS.length)*40;}
+const socUsed=new Set();
+function genAlert(){for(let i=0;i<25;i++){const th=Math.random()<0.52,arr=th?THREATS:FPS,ti=RN(0,arr.length-1),key=(th?'t':'f')+ti;
+  if(socUsed.has(key))continue;socUsed.add(key);if(socUsed.size>=arr.length*1.6)socUsed.clear();const a=arr[ti]();a.threat=th;return a;}
+ const a=R([...THREATS,...FPS])();a.threat=Math.random()<0.5;return a;}
+
+/* ---------- BREACH ---------- */
+const pick3=arr=>{const c=arr.slice();for(let i=c.length-1;i>0;i--){const j=RN(0,i);[c[i],c[j]]=[c[j],c[i]];}return c.slice(0,3);};
+const ARCH=[
+ {q:()=>'Which host does a pentester attack first?',bad:()=>({ico:'📠',name:R(['OLD-FTP','LEGACY-FTP','ARCHIVE-01']),desc:'Public FTP, anonymous login ON, '+RN(2007,2011)+' build',tag:'DMZ',clue:'Anonymous FTP on a 15-year-old server is an instant, no-password foothold.',act:'Fix: disable anonymous FTP, retire the legacy box or move it off the internet, and patch/replace the OS.'}),decoys:[{ico:'🖥️',name:'WEB-01',desc:'Patched, WAF in front, HTTPS only',tag:'DMZ'},{ico:'🗄️',name:'DB-PROD',desc:'Internal only, no public route',tag:'INTERNAL'},{ico:'🔒',name:'VPN-GW',desc:'MFA enforced, fully updated',tag:'EDGE'},{ico:'📧',name:'MAIL-01',desc:'Hardened, TLS, patched monthly',tag:'DMZ'},{ico:'🧮',name:'APP-07',desc:'Patched, behind reverse proxy',tag:'INTERNAL'}]},
+ {q:()=>'Weakest credential to exploit?',bad:()=>({ico:'👤',name:R(['admin / admin','root / toor','admin / password']),desc:'Default creds on the '+R(['router','switch','printer'])+' admin panel',tag:'DEFAULT',clue:'Default credentials are the first thing attackers try — and they work far too often.',act:'Fix: change all default passwords, enforce a strong password policy + MFA, and audit devices for factory defaults.'}),decoys:[{ico:'👤',name:'j.smith',desc:'22-char passphrase + hardware key',tag:'USER'},{ico:'👤',name:'svc_sql',desc:'Rotated weekly, vaulted',tag:'SERVICE'},{ico:'👤',name:'ceo',desc:'MFA + passkey only',tag:'EXEC'},{ico:'👤',name:'backup_op',desc:'Random 32-char, in PAM',tag:'SERVICE'},{ico:'👤',name:'admin_ad',desc:'Smartcard-only login',tag:'ADMIN'}]},
+ {q:()=>'Which service exposes the network?',bad:()=>R([{ico:'🖧',name:'RDP 3389',desc:'Open to the internet, no MFA',tag:'PORT',clue:'Internet-facing RDP with no MFA is the #1 ransomware entry point.',act:'Fix: put RDP behind a VPN, require MFA, restrict source IPs, and enable account lockout.'},{ico:'🗂️',name:'SMB 445',desc:'Exposed to the internet, SMBv1 on',tag:'PORT',clue:'SMBv1 on the open internet invites EternalBlue-style wormable ransomware.',act:'Fix: block 445 at the edge, disable SMBv1 everywhere, and patch.'},{ico:'🐚',name:'Telnet 23',desc:'Open, plaintext, no encryption',tag:'PORT',clue:'Telnet sends credentials in clear text and should never be exposed.',act:'Fix: disable Telnet, use SSH with keys, and firewall the port.'}]),decoys:[{ico:'🌐',name:'HTTPS 443',desc:'TLS 1.3, cert valid',tag:'PORT'},{ico:'📧',name:'SMTP 25',desc:'Relay locked, SPF/DKIM set',tag:'PORT'},{ico:'🔑',name:'SSH 22',desc:'Key-only, root login disabled',tag:'PORT'},{ico:'🔐',name:'IMAPS 993',desc:'TLS only, MFA on mailboxes',tag:'PORT'}]},
+ {q:()=>'Pick the social-engineering target.',bad:()=>R([{ico:'📞',name:R(['New Intern','Temp Hire','Day-3 Joiner']),desc:'Eager to help, no security training yet',tag:'STAFF',clue:'Untrained and eager to please makes them the easiest person to manipulate.',act:'Fix: security onboarding from day one, a clear "verify before you act" culture, and an easy way to report.'},{ico:'📞',name:'Reception',desc:'Answers every call, holds every door',tag:'STAFF',clue:'The front desk is friendly by design — perfect for pretexting and tailgating.',act:'Fix: visitor verification procedures, anti-tailgating training, and a script for unusual requests.'}]),decoys:[{ico:'🛡️',name:'SOC Analyst',desc:'Phishing-aware, reports tests',tag:'STAFF'},{ico:'💼',name:'CISO',desc:'Runs the awareness program',tag:'STAFF'},{ico:'⚙️',name:'Sysadmin',desc:'Verifies every request by phone',tag:'STAFF'},{ico:'🎓',name:'Security Champ',desc:'Trains others monthly',tag:'STAFF'}]},
+ {q:()=>'Which app has the exploitable flaw?',bad:()=>R([{ico:'📝',name:'Legacy Portal',desc:"Login: user=' OR '1'='1 works",tag:'APP',clue:'That input bypasses authentication — a live SQL injection.',act:'Fix: use parameterized queries, add input validation and a WAF, and code-review the auth path.'},{ico:'💬',name:'Old Forum',desc:'Comment field runs <script> tags',tag:'APP',clue:'Unfiltered script in a field is stored XSS that hijacks other users\' sessions.',act:'Fix: output-encode user content, add a Content-Security-Policy, and sanitize inputs.'},{ico:'📤',name:'Upload Tool',desc:'Accepts .php files, no checks',tag:'APP',clue:'Unrestricted upload of executable files leads to a web shell / RCE.',act:'Fix: allowlist file types, store uploads outside the web root, and never execute uploaded files.'}]),decoys:[{ico:'🛒',name:'Shop API',desc:'Input validated, params bound',tag:'APP'},{ico:'📱',name:'Mobile App',desc:'Cert pinning, obfuscated',tag:'APP'},{ico:'📊',name:'Dashboard',desc:'SSO, CSP headers set',tag:'APP'},{ico:'🧾',name:'Billing App',desc:'Parametrized queries, WAF',tag:'APP'}]},
+ {q:()=>'Where is the data-exfil path?',bad:()=>R([{ico:'☁️',name:'Guest WiFi',desc:'Bridged to corp LAN, no isolation',tag:'NET',clue:'Guest WiFi bridged to the corporate LAN is a wide-open side door.',act:'Fix: isolate guest WiFi to its own VLAN/internet-only, with no route into corporate.'},{ico:'🔌',name:'Open USB',desc:'No device control, mass-storage allowed',tag:'HOST',clue:'Uncontrolled USB ports let data walk straight out.',act:'Fix: deploy device control/DLP, block mass storage by policy, and log USB usage.'}]),decoys:[{ico:'🧱',name:'Egress FW',desc:'Default-deny outbound',tag:'CTRL'},{ico:'🔍',name:'DLP',desc:'Scans uploads, blocks archives',tag:'CTRL'},{ico:'📡',name:'Proxy',desc:'All traffic logged & filtered',tag:'CTRL'},{ico:'🚧',name:'Segmentation',desc:'VLANs isolated, least access',tag:'NET'}]},
+ {q:()=>'First target for privilege escalation?',bad:()=>R([{ico:'📁',name:'Public Share',desc:'\\\\srv\\backup — passwords.xlsx readable by all',tag:'SMB',clue:'A world-readable share with a passwords file hands over the keys.',act:'Fix: lock down share permissions (least privilege), remove the credentials file, and rotate any exposed passwords.'},{ico:'📜',name:'Script Folder',desc:'logon.bat contains a plaintext admin password',tag:'SMB',clue:'Hardcoded admin passwords in scripts are a gift to attackers.',act:'Fix: remove secrets from scripts, use a secrets vault / gMSA, and rotate the exposed password.'},{ico:'⏰',name:'Scheduled Task',desc:'Runs as SYSTEM, editable by any user',tag:'HOST',clue:'A SYSTEM task any user can edit is trivial privilege escalation.',act:'Fix: correct the task/file permissions so only admins can modify it, and audit for similar misconfigs.'}]),decoys:[{ico:'🖥️',name:'Workstation',desc:'EDR on, least-privilege user',tag:'HOST'},{ico:'🗝️',name:'Vault',desc:'Secrets sealed, audited',tag:'PAM'},{ico:'🧩',name:'GPO',desc:'Hardened, signed policies',tag:'AD'},{ico:'🔐',name:'LAPS',desc:'Randomized local admin passwords',tag:'AD'}]},
+ {q:()=>'Which device is the rogue entry point?',bad:()=>R([{ico:'🖨️',name:'Printer',desc:'Default SNMP "public", telnet open',tag:'IOT',clue:'Forgotten printers with default SNMP/telnet are a classic pivot point.',act:'Fix: change SNMP community strings, disable telnet, patch firmware, and put printers on an isolated VLAN.'},{ico:'📹',name:'Old IP Cam',desc:'Default password, firmware from 2015',tag:'IOT',clue:'Cheap cameras with default creds are botnet and pivot favorites.',act:'Fix: change defaults, update firmware, and segment IoT away from corporate.'},{ico:'🔊',name:'Smart TV',desc:'On the corp VLAN, never updated',tag:'IOT',clue:'An unpatched smart device on the corp VLAN is an easy beachhead.',act:'Fix: move IoT/AV gear to a dedicated VLAN with no corporate access, and keep it updated.'}]),decoys:[{ico:'📷',name:'IP Camera',desc:'Firmware current, VLAN isolated',tag:'IOT'},{ico:'🌡️',name:'HVAC',desc:'Air-gapped controller',tag:'OT'},{ico:'⌚',name:'Badge Reader',desc:'Encrypted, monitored',tag:'PHYS'},{ico:'📶',name:'Access Point',desc:'WPA3, cert auth, isolated mgmt',tag:'NET'}]},
+ {q:()=>'Spot the phishing-ready weakness.',bad:()=>({ico:'📨',name:'Email Gateway',desc:'No '+R(['SPF','DKIM','DMARC'])+' — domain is spoofable',tag:'MAIL',clue:'Missing SPF/DKIM/DMARC lets attackers spoof your own domain to your staff.',act:'Fix: publish SPF, DKIM and DMARC (move to p=reject), and monitor DMARC reports.'}),decoys:[{ico:'🔐',name:'MFA',desc:'Enforced org-wide',tag:'IAM'},{ico:'🎓',name:'Training',desc:'Monthly, 96% pass rate',tag:'PEOPLE'},{ico:'🧯',name:'Sandbox',desc:'Detonates every attachment',tag:'MAIL'},{ico:'🚫',name:'Link Rewrite',desc:'All URLs scanned at click-time',tag:'MAIL'}]},
+ {q:()=>'Which server is the soft target?',bad:()=>({ico:'🪟',name:R(['WIN-2008','WIN-2003','SRV-LEGACY']),desc:'End-of-life OS, SMBv1 enabled, unpatched',tag:'SRV',clue:'An EOL Windows box with SMBv1 is EternalBlue territory — wormable.',act:'Fix: decommission or isolate it, migrate the workload to a supported OS, and disable SMBv1.'}),decoys:[{ico:'🐧',name:'LINUX-05',desc:'Auto-patched, SELinux enforcing',tag:'SRV'},{ico:'📦',name:'K8S-NODE',desc:'Hardened, network policies on',tag:'SRV'},{ico:'🧮',name:'APP-07',desc:'Patched, monitored',tag:'SRV'},{ico:'🗄️',name:'DB-02',desc:'Latest patches, TDE encryption',tag:'SRV'}]},
+ {q:()=>'Best lateral-movement opportunity?',bad:()=>R([{ico:'🔁',name:'Shared local admin',desc:'Same local admin password on all PCs',tag:'AD',clue:'One reused local-admin password enables pass-the-hash across the whole fleet.',act:'Fix: deploy LAPS so every machine has a unique local admin password; block lateral admin logons.'},{ico:'🎫',name:'Kerberoastable svc',desc:'Service account, weak password, SPN set',tag:'AD',clue:'A weak service-account password with an SPN yields a crackable Kerberos ticket.',act:'Fix: use long random passwords or gMSA for service accounts, and monitor for Kerberoasting.'}]),decoys:[{ico:'🚧',name:'Segmentation',desc:'Micro-segmented, least access',tag:'NET'},{ico:'👁️',name:'EDR',desc:'Behavioral detection fleet-wide',tag:'HOST'},{ico:'🔐',name:'LAPS',desc:'Unique local admin per host',tag:'AD'},{ico:'🎟️',name:'Kerberos',desc:'AES only, strong svc passwords',tag:'AD'}]},
+ {q:()=>'Which cloud misconfig do you hit?',bad:()=>R([{ico:'🪣',name:'S3 Bucket',desc:'Public read, lists all objects',tag:'CLOUD',clue:'A public bucket leaks data with zero exploitation needed.',act:'Fix: block public access, apply least-privilege bucket policies, and enable access logging.'},{ico:'🗝️',name:'Leaked Key',desc:'AWS key hardcoded in a public repo',tag:'CLOUD',clue:'A committed access key lets an attacker log straight into your cloud.',act:'Fix: revoke the key immediately, rotate credentials, scan history, and add secret-scanning to CI.'},{ico:'🌍',name:'Open DB',desc:'MongoDB exposed, no auth',tag:'CLOUD',clue:'A no-auth internet-facing database is a smash-and-grab.',act:'Fix: require auth, restrict the security group to known IPs, and never expose databases publicly.'}]),decoys:[{ico:'🔑',name:'IAM Roles',desc:'Least-privilege, no wildcards',tag:'CLOUD'},{ico:'🛡️',name:'Security Grp',desc:'Ports locked to office IPs',tag:'CLOUD'},{ico:'📜',name:'CloudTrail',desc:'Logging on, alerts wired',tag:'CLOUD'},{ico:'🔒',name:'KMS',desc:'Encrypted at rest, rotated keys',tag:'CLOUD'}]},
+ {q:()=>'Where does the attacker get initial access?',bad:()=>R([{ico:'🎣',name:'Macro Doc',desc:'"Invoice.docm" — enable-content macro',tag:'EMAIL',clue:'Macro-enabled Office docs are a classic malware delivery vector.',act:'Fix: block macros from the internet by policy, sandbox attachments, and train staff not to enable content.'},{ico:'🔗',name:'Fake Login',desc:'Cloned O365 page, harvests passwords',tag:'PHISH',clue:'A convincing fake login page is how most breaches actually start.',act:'Fix: roll out phishing-resistant MFA (FIDO2), user reporting, and URL/click protection.'}]),decoys:[{ico:'🧯',name:'Attach Sandbox',desc:'Detonates files pre-delivery',tag:'MAIL'},{ico:'🔐',name:'FIDO2 Keys',desc:'Phishing-resistant MFA',tag:'IAM'},{ico:'👁️',name:'EDR',desc:'Blocks macro child processes',tag:'HOST'},{ico:'🚫',name:'App Allowlist',desc:'Only signed apps run',tag:'HOST'}]},
+ {q:()=>'Which patch gap gets exploited?',bad:()=>R([{ico:'🩹',name:R(['VPN Appliance','Firewall','Gateway']),desc:'Public CVE, exploit released, unpatched 8 months',tag:'EDGE',clue:'A known-exploited CVE on an edge device is attackers\' priority #1.',act:'Fix: patch it now (emergency change), check for prior compromise, and set an SLA for edge patching.'},{ico:'🌐',name:'Web Server',desc:'Runs a framework version with a public RCE',tag:'DMZ',clue:'An internet-facing app with a public RCE is low-hanging fruit.',act:'Fix: upgrade the framework, add a virtual patch/WAF rule meanwhile, and scan for webshells.'}]),decoys:[{ico:'🖥️',name:'Fleet',desc:'Auto-patched within 48h',tag:'HOST'},{ico:'🗄️',name:'DB Cluster',desc:'Current patches, isolated',tag:'INTERNAL'},{ico:'📦',name:'Containers',desc:'Rebuilt nightly from clean images',tag:'CLOUD'},{ico:'🔒',name:'VPN-GW',desc:'Latest firmware, monitored',tag:'EDGE'}]},
+ {q:()=>'Physical: which door do you walk through?',bad:()=>R([{ico:'🚬',name:'Smoking Door',desc:'Propped open, no camera, no badge',tag:'PHYS',clue:'A propped side door is the easiest breach of all — no hacking required.',act:'Fix: alarm/auto-close the door, add a camera, and build a no-propping, challenge-strangers culture.'},{ico:'📦',name:'Loading Bay',desc:'Deliveries let in without checks',tag:'PHYS',clue:'Delivery entrances are notoriously easy to tailgate through.',act:'Fix: verify deliveries, add access control and CCTV at the bay, and escort visitors.'}]),decoys:[{ico:'🚪',name:'Main Lobby',desc:'Guard + badge + visitor log',tag:'PHYS'},{ico:'🔐',name:'Server Room',desc:'Biometric, mantrap, logged',tag:'PHYS'},{ico:'🅿️',name:'Garage',desc:'Badge gate, ANPR cameras',tag:'PHYS'},{ico:'🪟',name:'Windows',desc:'Sealed, alarmed, 4th floor',tag:'PHYS'}]},
+ {q:()=>'Which Active Directory weakness do you abuse?',bad:()=>R([{ico:'🎟️',name:'AS-REP Roast',desc:'User has "no pre-auth" set',tag:'AD',clue:'No-preauth accounts hand you a crackable hash without any credentials.',act:'Fix: remove "do not require Kerberos pre-auth", enforce strong passwords, and alert on AS-REP requests.'},{ico:'👑',name:'Unconstrained Deleg',desc:'Server trusted for full delegation',tag:'AD',clue:'Unconstrained delegation lets an attacker capture domain-admin tickets.',act:'Fix: remove unconstrained delegation, use constrained/RBCD, and mark admins as "sensitive, cannot be delegated".'}]),decoys:[{ico:'🔐',name:'Tiered Admin',desc:'Tier-0 accounts isolated',tag:'AD'},{ico:'🎫',name:'Kerberos',desc:'AES, no legacy ciphers',tag:'AD'},{ico:'👁️',name:'AD Auditing',desc:'Sensitive events alerted',tag:'AD'},{ico:'🧩',name:'GPO',desc:'Signed, least-privilege',tag:'AD'}]}];
+function breachPool(){return ARCH.length*3*20;}
+const archUsed=[];
+function nextScenario(){let idx;for(let i=0;i<20;i++){idx=RN(0,ARCH.length-1);if(!archUsed.includes(idx))break;}
+ archUsed.push(idx);if(archUsed.length>ARCH.length-2)archUsed.shift();
+ const a=ARCH[idx],bad=Object.assign({bad:true},a.bad()),decoys=pick3(a.decoys).map(d=>Object.assign({bad:false},d));
+ const nodes=[bad,...decoys];for(let i=nodes.length-1;i>0;i--){const j=RN(0,i);[nodes[i],nodes[j]]=[nodes[j],nodes[i]];}
+ return{q:a.q(),nodes,bad};}
+
+/* ============================================================
+   ENGINE
+============================================================ */
+const ARCADE=(function(){
+ const GAME_SECONDS=60;
+ let game=null,running=false,timerId=null,t0=0,lastTickSec=99;
+ let score=0,streak=0,bestStreak=0,locked=false,history=[];
+ let caught=0,correct=0,wrong=0,handled=0,threats=0,fps=0,missed=0,sla=100,owned=0;
+ let cardNo=0,cur=null,dbl=0,eventFired=false;
+ let live=[],uid=0,spawnId=null,SPAWN_MS=2600,ALERT_TTL=8000,surged=false;
+ let curNodes=null,roundStart=0,roundNo=0,curScenarioQ='',curBad=null;
+
+ const META={
+  phish:{kind:'INBOX SHOWDOWN',title:['PHISH','HUNTER'],theme:'phish',boardKey:'dm_phish',hi:'hi-phish',
+    sub:'Some emails are real. Some are really good fakes.<br>You\'ve got <b>60 seconds</b> — trust the address, not the logo.',
+    rules:['✓ Correct <b>+100</b>','🔥 3-streak = <b>×multiplier</b>','✗ Wrong <b>−50</b>'],
+    fresh:()=>'Fresh inbox every game · '+phishPool().toLocaleString()+'+ possible emails',
+    hudR:'STREAK',
+    steps:[['Read the sender — fast','The address matters more than the logo. Watch for lookalikes: rnicrosoft, netfIix, a sneaky .xyz.'],['Tap LEGIT or PHISH','Right = +100. Wrong = −50, and you learn the tell you missed.'],['Build a streak','3 in a row = ×2, up to ×5. One slip resets it.']],
+    tip:'Urgency is the attacker\'s favourite weapon. If an email is rushing you, slow down.'},
+  soc:{kind:'SOC SHIFT',title:['ALERT','RUSH'],theme:'soc',boardKey:'dm_soc',hi:'hi-soc',
+    sub:'You\'re the analyst on shift. Alerts pour in with burning fuses —<br><b>escalate real threats, dismiss the noise.</b>',
+    rules:['🚨 Real threat <b>+150</b>','🧹 Noise cleared <b>+100</b>','✗ Wrong <b>−75</b>','💥 Ignored threat <b>−100</b>'],
+    fresh:()=>'Alerts generated fresh each shift · '+socPool().toLocaleString()+'+ variations',
+    hudR:'HANDLED',
+    steps:[['Alerts hit your queue','Each has a severity, a source, and a burning fuse. Ignore a real threat too long and it becomes a breach.'],['ESCALATE or DISMISS','Real threat escalated = +150. False positive cleared = +100. Wrong call = −75 and your SLA drops.'],['Survive the surge','Halfway through, the queue speeds up. Welcome to a real Tuesday.']],
+    tip:'Severity isn\'t the verdict. A LOW can be a real threat; a CRITICAL can be your own test file.'},
+  breach:{kind:'THINK LIKE AN ATTACKER',title:['BREACH','POINT'],theme:'breach',boardKey:'dm_breach',hi:'hi-breach',
+    sub:'Every network has one weak link. <b>Tap it before our pentesters would.</b><br>Faster + correct = bigger score.',
+    rules:['🎯 Right target <b>+120</b>','⚡ Speed bonus <b>+80</b>','🔥 Streak <b>×mult</b>','✗ Wrong <b>−60</b>'],
+    fresh:()=>'Scenarios randomized every run · '+breachPool().toLocaleString()+'+ board combos',
+    hudR:'STREAK',
+    steps:[['Scan the scene','Four targets: servers, people, ports, passwords. The little details reveal the weakness.'],['Tap the weakest link','Right = +120 plus a speed bonus. Wrong = −60 and the real flaw is revealed.'],['Chain your streak','Streaks multiply up to ×5. Default passwords first, ancient servers second.']],
+    tip:'Attackers don\'t pick the strongest lock. They walk the building until they find the open window.'}
+ };
+
+ function show(id){['hub','start','game','end','review'].forEach(s=>$(s).classList.toggle('on',s===id));}
+ function setTheme(t){document.body.dataset.game=t;}
+ function refreshHi(){['phish','soc','breach'].forEach(g=>{const b=loadBoardFor(g);$(META[g].hi).textContent=b.length?b[0].s:'—';
+     fetchServerBoard(g).then(server=>{if(server){localPersist(g,server);$(META[g].hi).textContent=server.length?server[0].s:'—';}});});}
+
+ function goHub(){stopAll();setTheme('hub');$('nav').classList.remove('on');MUSIC.play('menu');show('hub');refreshHi();}
+ function toggleSfx(){const m=!SFX.isMuted();SFX.setMuted(m);$('mutebtn').textContent=m?'🔇 SFX':'🔊 SFX';}
+ function toggleMusic(){const on=!MUSIC.isOn();MUSIC.setOn(on);$('musicbtn').textContent=on?'♪ Music':'♪̶ Music';$('musicbtn').style.opacity=on?'1':'.55';}
+
+ function how(g){
+   const m=META[g];setTheme(m.theme);
+   $('modalbox').innerHTML='<button class="x" onclick="ARCADE.closeModal()">✕</button>'+
+     '<div class="mkind">HOW TO PLAY</div><h2>'+m.title.join(' ')+'</h2>'+
+     m.steps.map((s,i)=>'<div class="step"><span class="n">'+(i+1)+'</span><div><b>'+esc(s[0])+'</b><p>'+esc(s[1])+'</p></div></div>').join('')+
+     '<div class="mtip">💡 '+esc(m.tip)+'</div>'+
+     '<button class="mgo" onclick="ARCADE.closeModal();ARCADE.start(\''+g+'\')">▶ LET\'S PLAY</button>';
+   $('modal').classList.add('on');
+ }
+ function openSetup(){
+   $('modalbox').innerHTML='<button class="x" onclick="ARCADE.closeModal()">✕</button>'+
+     '<div class="mkind">BOOTH CREW</div><h2>Kiosk setup</h2>'+
+     '<p class="mbody"><b>1.</b> Open this file in the tablet browser.<br><b>2.</b> Share → <b>Add to Home Screen</b> → launch from the icon for fullscreen.<br><b>3.</b> Turn on <b>Guided Access</b> (iPad: Settings → Accessibility) or <b>Screen Pinning</b> (Android) so visitors stay in the arcade.<br><b>4.</b> Set the display to never sleep, brightness up.<br><br>Everything runs <b>offline</b> — no WiFi needed. Each game keeps its own leaderboard on this tablet; clear the browser\'s site data to reset scores for a new day.</p>'+
+     '<button class="mgo" onclick="ARCADE.closeModal()">GOT IT</button>';
+   $('modal').classList.add('on');
+ }
+ function closeModal(){$('modal').classList.remove('on');}
+
+ function start(g){
+   game=g;const m=META[g];setTheme(m.theme);$('nav').classList.add('on');MUSIC.play(g);
+   $('s-kind').textContent=m.kind;
+   $('s-title').innerHTML=m.title[0]+' <span class="hl neon">'+m.title[1]+'</span>';
+   $('s-sub').innerHTML=m.sub;
+   $('s-rules').innerHTML=m.rules.map(r=>'<div class="rule">'+r+'</div>').join('');
+   $('s-fresh').textContent=m.fresh();
+   show('start');
+ }
+
+ function begin(){
+   const m=META[game];SFX.coin();MUSIC.play(game);
+   running=true;locked=false;score=0;streak=0;bestStreak=0;history=[];lastTickSec=99;
+   caught=correct=wrong=0;handled=threats=fps=missed=0;sla=100;owned=0;
+   cardNo=0;cur=null;dbl=0;eventFired=false;live=[];uid=0;surged=false;SPAWN_MS=2600;ALERT_TTL=8000;curNodes=null;roundNo=0;
+   phUsed.clear();socUsed.clear();archUsed.length=0;
+   $('hud-l').innerHTML='SCORE<b id="score">0</b>';
+   $('hud-r').innerHTML=m.hudR+'<b id="rstat">'+(game==='soc'?'0':'×1')+'</b>';
+   hideEvent();
+   $('phishArea').classList.toggle('on',game==='phish');
+   $('socArea').classList.toggle('on',game==='soc');
+   $('breachArea').classList.toggle('on',game==='breach');
+   $('slawrap').classList.toggle('on',game==='soc');
+   show('game');
+   if(game==='soc'){$('socArea').innerHTML='';$('slabar').style.width='100%';$('slapct').textContent='100%';$('slabar').style.background='linear-gradient(90deg,#3ee67a,#8fe635)';}
+   hud();
+   if(game==='phish')renderCard();else if(game==='breach')nextRound();
+   clearInterval(timerId);clearInterval(spawnId);t0=Date.now();timerId=setInterval(tick,100);
+   if(game==='soc'){spawn();spawn();spawnId=setInterval(spawn,SPAWN_MS);}
+ }
+
+ function tick(){
+   const left=GAME_SECONDS-(Date.now()-t0)/1000,l=Math.max(0,left);
+   $('timerbar').style.width=(l/GAME_SECONDS*100)+'%';$('timerbar').classList.toggle('danger',l<=10);$('timenum').textContent=l.toFixed(1);
+   const s=Math.ceil(l);if(l<=5&&s!==lastTickSec){lastTickSec=s;SFX.tick();}
+   if(game==='phish'){if(!eventFired&&left<=30){eventFired=true;showEvent('⚡ DOUBLE POINTS — 10s!','#ffd23f','#231708');dbl=Date.now()+10000;SFX.event();buzz(60);}if(dbl&&Date.now()>dbl){dbl=0;hideEvent();}}
+   if(game==='soc'){if(!surged&&left<=30){surged=true;socSurge();}const now=Date.now();live.slice().forEach(a=>{const el=$('a'+a.id);if(el){const rem=Math.max(0,1-(now-a.born)/ALERT_TTL);el.querySelector('.fuse').style.width=(rem*100)+'%';}if(now-a.born>ALERT_TTL)expire(a);});}
+   if(left<=0)endGame();
+ }
+ function mult(){return Math.min(1+Math.floor(streak/3),5);}
+ function hud(){$('score').textContent=score;if(game==='soc')$('rstat').textContent=handled;else $('rstat').innerHTML='×'+mult()+(streak>0?' '+'🔥'.repeat(Math.min(streak,3)):'');}
+ function hideEvent(){$('eventbn').classList.remove('on');$('eventbn').style.display='none';}
+ function showEvent(txt,bg,fg){const b=$('eventbn');b.textContent=txt;b.style.background=bg;b.style.color=fg;b.style.display='block';b.classList.add('on');}
+
+ /* PHISH */
+ function renderCard(){cur=genEmail(cardNo);cardNo++;const c=$('card');c.className='email';c.style.animation='none';void c.offsetWidth;c.style.animation='';
+   c.innerHTML='<div class="apphdr"><span class="dot"></span> INBOX · new message</div>'+
+     '<div class="from">'+cur.from+' <span class="addr">&lt;'+cur.addr+'&gt;</span></div>'+
+     '<div class="subj">'+cur.subj+'</div><div class="body">'+cur.body+'</div><div class="stamp" id="stamp"></div>';}
+ function phishAnswer(saidPhish){
+   if(locked||!running||game!=='phish')return;locked=true;
+   const right=(saidPhish===cur.phish);
+   history.push({q:cur.subj,detail:cur.from+' <'+cur.addr+'>',your:saidPhish?'PHISH':'LEGIT',correct:cur.phish?'PHISH — it\'s a fake':'LEGIT — it\'s genuine',status:right?'right':'wrong',reason:cur.clue,act:cur.act});
+   const stamp=$('stamp');stamp.textContent=saidPhish?'PHISH!':'LEGIT';stamp.className='stamp show '+(saidPhish?'p':'l');
+   const card=$('card');
+   if(right)card.classList.add(saidPhish?'fly-right':'fly-left');
+   else{card.classList.add('wrongcard');const ad=card.querySelector('.addr');if(ad){ad.style.background='#ffd7d7';ad.style.color='#b3122e';ad.style.borderRadius='.3em';ad.style.padding='.05em .3em';}}
+   if(right){correct++;if(cur.phish)caught++;streak++;bestStreak=Math.max(bestStreak,streak);let pts=100*mult();if(dbl)pts*=2;score+=pts;toast('good',(cur.phish?'Nice catch! ':'Correct — legit. ')+'+'+pts);popPts('+'+pts,'#3ee67a');streak>=6?SFX.great():SFX.good();buzz(18);}
+   else{wrong++;streak=0;score=Math.max(0,score-50);toast('bad','−50 · '+cur.clue);popPts('−50','#ff5d73');SFX.bad();buzz([60,40,60]);document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),300);}
+   hud();setTimeout(()=>{$('toast').classList.remove('show');if(running){renderCard();locked=false;}},right?420:1300);
+ }
+
+ /* SOC */
+ function socSurge(){SPAWN_MS=1700;ALERT_TTL=6500;clearInterval(spawnId);spawnId=setInterval(spawn,SPAWN_MS);showEvent('🔥 ALERT SURGE!','#e2354f','#fff');SFX.surge();buzz(80);setTimeout(hideEvent,2500);}
+ function spawn(){if(!running||game!=='soc'||live.length>=4)return;const a=Object.assign({id:++uid,born:Date.now()},genAlert());live.push(a);SFX.newalert();
+   const el=document.createElement('div');el.className='alert';el.id='a'+a.id;
+   el.style.borderLeftColor=a.sev==='CRITICAL'?'#e2354f':a.sev==='HIGH'?'#f97316':a.sev==='MEDIUM'?'#ffd23f':'#38bdf8';
+   el.innerHTML='<div class="top"><span class="sev '+a.sev+'">'+a.sev+'</span><span class="src">'+a.src+'</span></div><h4>'+a.t+'</h4><p>'+a.d+'</p>'+
+     '<div class="abtns"><button class="b-esc" onclick="ARCADE.act('+a.id+',true)">🚨 ESCALATE</button><button class="b-dis" onclick="ARCADE.act('+a.id+',false)">DISMISS</button></div><div class="fuse"></div>';
+   $('socArea').appendChild(el);}
+ function removeCard(a){live=live.filter(x=>x.id!==a.id);const el=$('a'+a.id);if(el){el.classList.add('leaving');setTimeout(()=>el.remove(),180);}}
+ function act(id,esc){if(!running)return;const a=live.find(x=>x.id===id);if(!a)return;const right=(esc===a.threat);
+   history.push({q:a.t,detail:a.sev+' · '+a.src+' — '+a.d,your:esc?'ESCALATE':'DISMISS',correct:(a.threat?'ESCALATE — real threat':'DISMISS — false positive'),status:right?'right':'wrong',reason:a.clue,act:a.act});
+   if(right){handled++;if(a.threat){threats++;score+=150;toast('good','Contained! +150');popPts('+150','#3ee67a');}else{fps++;score+=100;toast('good','Noise cleared. +100');popPts('+100','#bef264');}SFX.good();buzz(18);}
+   else{score=Math.max(0,score-75);slaHit(6);toast('bad','−75 · '+a.clue);popPts('−75','#ff5d73');SFX.bad();buzz([60,40,60]);}
+   removeCard(a);hud();if(live.length<2)spawn();}
+ function expire(a){removeCard(a);
+   history.push({q:a.t,detail:a.sev+' · '+a.src+' — '+a.d,your:'— (ran out of time)',correct:(a.threat?'ESCALATE — real threat':'DISMISS — false positive'),status:'miss',reason:a.clue,act:a.act});
+   if(a.threat){missed++;score=Math.max(0,score-100);slaHit(12);toast('bad','💥 BREACH! Ignored: '+a.t);popPts('BREACH!','#ff5d73');SFX.boom();buzz([80,50,120]);document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),340);}else{slaHit(3);}hud();}
+ function slaHit(n){sla=Math.max(0,sla-n);$('slabar').style.width=sla+'%';$('slapct').textContent=sla+'%';$('slabar').style.background=sla>60?'linear-gradient(90deg,#3ee67a,#8fe635)':sla>30?'linear-gradient(90deg,#ffd23f,#f97316)':'linear-gradient(90deg,#e2354f,#97182f)';}
+
+ /* BREACH */
+ function nextRound(){const sc=nextScenario();curNodes=sc.nodes;curBad=sc.bad;roundNo++;curScenarioQ=sc.q;
+   $('mission').textContent='TARGET '+roundNo;$('question').textContent=sc.q;
+   const net=$('net');net.innerHTML='';
+   sc.nodes.forEach((n,i)=>{const el=document.createElement('div');el.className='node';
+     el.innerHTML='<span class="tag">'+n.tag+'</span><span class="ico">'+n.ico+'</span><span class="name">'+n.name+'</span><span class="desc">'+n.desc+'</span><div class="pwned"><span>PWNED</span></div>';
+     el.onclick=()=>breachPick(el,n);net.appendChild(el);});
+   roundStart=Date.now();locked=false;}
+ function breachPick(el,n){if(!running||locked||game!=='breach')return;locked=true;
+   [...$('net').children].forEach((e,j)=>{if(curNodes[j].bad)e.classList.add('reveal-bad');else e.classList.add('dim');});
+   const right=n.bad;
+   history.push({q:curScenarioQ,detail:'You picked: '+n.name+' — '+n.desc,your:n.name,correct:curBad.name+' — '+curBad.desc,status:right?'right':'wrong',reason:curBad.clue,act:curBad.act});
+   if(right){correct++;owned++;streak++;bestStreak=Math.max(bestStreak,streak);const speed=Math.max(0,Math.round(80*(1-(Date.now()-roundStart)/6000)));const pts=(120*mult())+speed;score+=pts;toast('good','Owned it! +'+pts+(speed>40?' ⚡fast!':''));popPts('+'+pts,'#b98cff');streak>=6?SFX.great():SFX.pwn();buzz(20);}
+   else{wrong++;streak=0;score=Math.max(0,score-60);el.classList.remove('dim');el.classList.add('picked-wrong');toast('bad','−60 · weak link: '+curBad.name);popPts('−60','#ff5d73');SFX.bad();buzz([60,40,60]);}
+   hud();setTimeout(()=>{if(running)nextRound();},right?900:1600);}
+
+ /* END */
+ function stopAll(){running=false;clearInterval(timerId);clearInterval(spawnId);}
+ function ranks(g,s){
+   if(g==='phish'){if(s>=2600)return['🏆 ELITE THREAT HUNTER','Scary good. Our SOC team wants a word — the good kind.'];if(s>=1900)return['🥇 SENIOR ANALYST','Sharp. You read senders like a pro.'];if(s>=1200)return['🥈 CYBER DEFENDER','Solid instincts! A little more paranoia and you\'re elite.'];if(s>=700)return['🥉 SECURITY ROOKIE','Not bad! Watch those domains next time.'];return['🎣 PHISH FOOD','The attackers send their thanks. Come chat with our team — we can fix this. 😄'];}
+   if(g==='soc'){if(s>=2600)return['🏆 SOC COMMANDER','Flawless shift. Ask our team about a career in this.'];if(s>=1900)return['🥇 TIER-3 THREAT HUNTER','You see through noise like a veteran.'];if(s>=1200)return['🥈 TIER-2 ANALYST','Good instincts under pressure.'];if(s>=600)return['🥉 TIER-1 ANALYST','You survived the shift! A few slipped by.'];return['☕ ON COFFEE DUTY','The queue won this round. Our analysts do this 24/7 — come see how. 😄'];}
+   if(s>=2400)return['🏆 RED TEAM LEAD','Frightening instincts. Our pentest team would love to meet you.'];if(s>=1700)return['🥇 SENIOR PENTESTER','You find the open window every time.'];if(s>=1100)return['🥈 EXPLOIT SPECIALIST','Strong attacker mindset.'];if(s>=600)return['🥉 JUNIOR PENTESTER','Good start! You\'re learning to think like the bad guys.'];return['🔰 SCRIPT KIDDIE','The strong locks held. Come see how our red team really does it. 😄'];
+ }
+ function endGame(){stopAll();hideEvent();SFX.end();MUSIC.play('menu');
+   const total=correct+wrong,rk=ranks(game,score);
+   $('e-kind').textContent=game==='soc'?'SHIFT OVER':(game==='breach'?'ENGAGEMENT COMPLETE':'TIME\'S UP!');
+   $('finalscore').textContent=score;$('rank').textContent=rk[0];$('quip').textContent=rk[1];
+   let stats='';
+   if(game==='phish')stats='<div><b>'+caught+'</b>PHISH CAUGHT</div><div><b>'+(total?Math.round(correct/total*100):0)+'%</b>ACCURACY</div><div><b>×'+Math.min(1+Math.floor(bestStreak/3),5)+'</b>BEST STREAK</div>';
+   else if(game==='soc')stats='<div><b>'+threats+'</b>THREATS STOPPED</div><div><b>'+fps+'</b>NOISE CLEARED</div><div><b>'+missed+'</b>BREACHES MISSED</div><div><b>'+sla+'%</b>SLA</div>';
+   else stats='<div><b>'+owned+'</b>SYSTEMS OWNED</div><div><b>'+(total?Math.round(correct/total*100):0)+'%</b>ACCURACY</div><div><b>×'+Math.min(1+Math.floor(bestStreak/3),5)+'</b>BEST STREAK</div>';
+   $('endstats').innerHTML=stats;$('initialsRow').style.display='flex';$('initials').value='';renderBoard(null);show('end');
+   // pull the shared online board (if hosted) so it's live before they save
+   const g=game;fetchServerBoard(g).then(server=>{if(server){localPersist(g,server);if(game===g&&$('end').classList.contains('on'))renderBoard(null);}});
+   const passMark=game==='breach'?1100:1200;if(score>=passMark)confettiBurst(themeColors());
+ }
+ function themeColors(){return game==='phish'?['#ff5d73','#39e6d4','#ffd23f','#3ee67a','#ff6ec7','#f4f7ff']:game==='soc'?['#8fe635','#ffd23f','#3ee67a','#38bdf8','#f4f7ff']:['#b98cff','#ff6ec7','#ffd23f','#3ee67a','#f4f7ff'];}
+
+ /* leaderboard — server-synced when hosted (API_BASE), localStorage fallback always.
+    window.ARCADE_API (injected by the Next.js host) enables the shared online board. */
+ const mem={};
+ function keyFor(g){return META[g].boardKey;}
+ function apiBase(){
+   if(typeof window==='undefined')return null;
+   if(window.ARCADE_API!==undefined)return window.ARCADE_API;      // host override
+   if(location.protocol==='http:'||location.protocol==='https:')return ''; // served → same-origin API
+   return null;                                                     // file:// → offline, localStorage only
+ }
+ function localBoard(g){const k=keyFor(g);try{const r=localStorage.getItem(k);if(r)return JSON.parse(r);}catch(e){}return mem[k]||[];}
+ function localPersist(g,b){const k=keyFor(g);mem[k]=b;try{localStorage.setItem(k,JSON.stringify(b));}catch(e){}}
+ function loadBoardFor(g){return localBoard(g);} // sync (used for hi-scores on hub)
+ function loadBoard(){return localBoard(game);}
+ // async: pull the shared server board and merge into the on-screen board
+ async function fetchServerBoard(g){const base=apiBase();if(base===null)return null;
+   try{const res=await fetch(base+'/api/scores?game='+g,{cache:'no-store'});if(!res.ok)return null;const j=await res.json();return Array.isArray(j.scores)?j.scores:null;}catch(e){return null;}}
+ async function postServerScore(g,name,s){const base=apiBase();if(base===null)return null;
+   try{const res=await fetch(base+'/api/scores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:g,name:name,score:s})});if(!res.ok)return null;const j=await res.json();return Array.isArray(j.scores)?j.scores:null;}catch(e){return null;}}
+ function saveScore(){
+   const name=($('initials').value||'AAA').toUpperCase().slice(0,3);
+   let b=loadBoard();b.push({n:name,s:score});b.sort((x,y)=>y.s-x.s);b=b.slice(0,10);localPersist(game,b);
+   $('initialsRow').style.display='none';renderBoard(score);SFX.good();if(b.length&&b[0].s===score)confettiBurst(themeColors());
+   // push to shared server board (if hosted) and refresh with authoritative list
+   const g=game;postServerScore(g,name,score).then(server=>{if(server){localPersist(g,server);if(game===g)renderBoard(score);refreshHi();}});
+ }
+ function renderBoard(hl){const b=loadBoard();if(!b.length){$('board').innerHTML='<h3>🏆 LEADERBOARD</h3><div class="brow">Be the first — save your score!</div>';return;}let html='<h3>🏆 LEADERBOARD</h3>',done=false;b.forEach((r,i)=>{const me=(hl!==null&&!done&&r.s===hl);if(me)done=true;html+='<div class="brow'+(me?' me':'')+'"><span>'+(i+1)+'. '+r.n+'</span><span>'+r.s+'</span></div>';});$('board').innerHTML=html;}
+
+ /* REVIEW */
+ function openReview(){
+   const rights=history.filter(h=>h.status==='right').length,wrongs=history.filter(h=>h.status==='wrong').length,misses=history.filter(h=>h.status==='miss').length;
+   $('rv-title').textContent=META[game].title.join(' ')+' — Review';
+   let sum=rights+' correct';if(wrongs)sum+=' · '+wrongs+' wrong';if(misses)sum+=' · '+misses+' missed';sum+=' · '+history.length+' total';$('rv-summary').textContent=sum;
+   const list=$('rvlist');
+   if(!history.length){list.innerHTML='<p style="text-align:center;color:var(--sub);padding:2em;">No answers recorded this round — you ran out of time before making a call. Play again!</p>';show('review');return;}
+   list.innerHTML=history.map((h,i)=>{
+     const badgeTxt=h.status==='right'?'✓ CORRECT':h.status==='wrong'?'✗ WRONG':'⏱ MISSED';
+     const youClass=h.status==='right'?'you-ok':(h.status==='wrong'?'you-bad':'you-miss');
+     return '<div class="rvitem '+h.status+'">'+
+       '<div class="rvtop"><div class="qn">'+(i+1)+'. '+esc(h.q)+'</div><span class="badge '+h.status+'">'+badgeTxt+'</span></div>'+
+       '<div class="detail">'+esc(h.detail)+'</div>'+
+       '<div class="cmp"><span class="pill '+youClass+'"><span class="k">You:</span> '+esc(h.your)+'</span>'+
+        '<span class="pill corr"><span class="k">Correct:</span> '+esc(h.correct)+'</span></div>'+
+       '<div class="rvsec why"><span class="h">Why</span>'+esc(h.reason)+'</div>'+
+       '<div class="rvsec act"><span class="h">What to do</span>'+esc(h.act)+'</div></div>';
+   }).join('');
+   $('review').scrollTop=0;show('review');
+ }
+ function closeReview(){show('end');}
+
+ return{goHub,toggleSfx,toggleMusic,how,openSetup,closeModal,start,begin,act,saveScore,openReview,closeReview,_phish:phishAnswer,_hi:refreshHi};
+})();
+
+$('btnLegit').addEventListener('click',()=>ARCADE._phish(false));
+$('btnPhish').addEventListener('click',()=>ARCADE._phish(true));
+
+/* start menu music on first user gesture (browser autoplay policy) */
+function primeAudio(){AUDIO.ac();MUSIC.play('menu');window.removeEventListener('pointerdown',primeAudio);window.removeEventListener('keydown',primeAudio);}
+window.addEventListener('pointerdown',primeAudio);
+window.addEventListener('keydown',primeAudio);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)MUSIC.resume();else MUSIC.stop();});
+ARCADE._hi();
+</script>
+</body>
+</html>
